@@ -1,8 +1,8 @@
 """A small asynchronous client of the Housecairn API v1.
 
 Written against the OpenAPI schema of Housecairn (a copy is in
-tests/fixtures/openapi.yaml). It only reads: the integration needs a token with
-the `read` scope, bound to the home it shows.
+tests/fixtures/openapi.yaml). It reads with the `read` scope, and closes an
+occurrence ("Done") with the `write` scope; the token is bound to the home it shows.
 
 The token is sent in the `Authorization` header and nowhere else: it is never
 part of an address, a log line or an exception message.
@@ -11,6 +11,7 @@ part of an address, a log line or an exception message.
 from __future__ import annotations
 
 import datetime
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from decimal import Decimal
@@ -19,12 +20,18 @@ from urllib.parse import parse_qs, urlsplit
 
 import aiohttp
 
+_LOGGER = logging.getLogger(__name__)
+
 API_PREFIX: Final = "/api/v1"
 REQUEST_TIMEOUT: Final = aiohttp.ClientTimeout(total=30)
 # The largest page the API serves (core.pagination.DefaultCursorPagination).
 PAGE_SIZE: Final = 200
 # A list longer than this many pages is cut: the count is then "at least".
 MAX_PAGES: Final = 10
+# The statuses of an occurrence that is over (schema `OccurrenceStatusEnum`).
+CLOSED_STATUSES: Final = frozenset({"done", "skipped"})
+# An occurrence that cannot exist: the probe of the `write` scope (see has_write_scope).
+NO_OCCURRENCE: Final = "00000000-0000-0000-0000-000000000000"
 
 
 class HouseCairnError(Exception):
@@ -52,7 +59,19 @@ class HouseCairnHomeLockedError(HouseCairnError):
 
 
 class HouseCairnNotFoundError(HouseCairnError):
-    """404: the home does not exist, or the token is not bound to it."""
+    """404: the home or the occurrence does not exist, or the token is not bound to it."""
+
+
+class HouseCairnRejectedError(HouseCairnError):
+    """400: Housecairn refused the change (for example an occurrence already closed).
+
+    The answer carries a message, not a stable code: `detail` is that message, for the
+    logs and never for a decision.
+    """
+
+    def __init__(self, detail: str) -> None:
+        super().__init__("the change was refused")
+        self.detail = detail
 
 
 class HouseCairnResponseError(HouseCairnError):
@@ -81,17 +100,42 @@ class Occurrence:
     task_title: str
     due_on: datetime.date | None
     is_overdue: bool
+    status: str
+    room: str | None
+    visible_from: datetime.date | None
 
     @classmethod
     def from_api(cls, data: dict[str, Any]) -> Occurrence:
         due = data["due_on"]
+        visible = data["visible_from"]
+        room = data["room"]
         return cls(
             id=str(data["id"]),
             task=str(data["task"]),
             task_title=str(data["task_title"]),
             due_on=datetime.date.fromisoformat(due) if due else None,
             is_overdue=bool(data["is_overdue"]),
+            status=str(data["status"]),
+            room=str(room) if room else None,
+            visible_from=datetime.date.fromisoformat(visible) if visible else None,
         )
+
+    @property
+    def is_closed(self) -> bool:
+        """Done or skipped: nothing is left to do."""
+        return self.status in CLOSED_STATUSES
+
+
+@dataclass(frozen=True, slots=True)
+class Room:
+    """A room (schema `Room`), reduced to its name."""
+
+    id: str
+    name: str
+
+    @classmethod
+    def from_api(cls, data: dict[str, Any]) -> Room:
+        return cls(id=str(data["id"]), name=str(data["name"]))
 
 
 @dataclass(frozen=True, slots=True)
@@ -163,12 +207,17 @@ class HouseCairnClient:
         rows = await self._list(f"/homes/{home_id}/occurrences/", {"overdue": "true"})
         return Rows([Occurrence.from_api(row) for row in rows.items], rows.complete)
 
-    async def open_from(self, home_id: str, day: datetime.date) -> Rows[Occurrence]:
+    async def open_from(
+        self, home_id: str, day: datetime.date, until: datetime.date | None = None
+    ) -> Rows[Occurrence]:
         """Open occurrences due on `day` and after, by due date, hidden ones included.
 
-        The list is read only as far as `day` goes: its first row is the next due
-        date, and the rows dated `day` are the tasks of the day.
+        The list is read only as far as `until` (`day` by default) goes: its first row
+        is the next due date, the rows dated `day` are the tasks of the day, and the
+        rows up to `until` are what the to-do list shows. Rows past `until` may be
+        returned too (the last page is read whole); the caller cuts them.
         """
+        last = (until or day).isoformat()
         params = {
             "status": "open",
             "due_after": day.isoformat(),
@@ -177,9 +226,68 @@ class HouseCairnClient:
         rows = await self._list(
             f"/homes/{home_id}/occurrences/",
             params,
-            keep_going=lambda page: bool(page) and page[-1].get("due_on") == day.isoformat(),
+            # Undated rows come last: a page that ends on one has no dated row after it.
+            keep_going=lambda page: bool(page) and (page[-1].get("due_on") or "9") <= last,
         )
         return Rows([Occurrence.from_api(row) for row in rows.items], rows.complete)
+
+    async def occurrence(self, home_id: str, occurrence_id: str) -> Occurrence:
+        """One occurrence (`GET /occurrences/{occurrence_id}/`)."""
+        data = await self._request("GET", f"/homes/{home_id}/occurrences/{occurrence_id}/")
+        return Occurrence.from_api(data)
+
+    async def complete(self, home_id: str, occurrence_id: str) -> None:
+        """Mark an occurrence done today (`POST /occurrences/{occurrence_id}/complete/`).
+
+        Needs the `write` scope. Housecairn creates the next occurrence of a repeating
+        task by itself. An occurrence that is already closed is a 400 with a message
+        and no stable code: the caller reads the occurrence to tell why.
+        """
+        await self._request(
+            "POST", f"/homes/{home_id}/occurrences/{occurrence_id}/complete/", json={}
+        )
+
+    async def has_write_scope(self, home_id: str) -> bool:
+        """Whether the token has the `write` scope, without changing anything.
+
+        The API has no endpoint that describes the token (docs/plan.md). The scope is
+        checked before the occurrence is looked up, so undoing an occurrence that
+        cannot exist answers 403 without `write` and 404 with it.
+        """
+        try:
+            await self._request(
+                "POST", f"/homes/{home_id}/occurrences/{NO_OCCURRENCE}/undo/", json={}
+            )
+        except HouseCairnScopeError:
+            return False
+        except HouseCairnNotFoundError:
+            return True
+        raise HouseCairnResponseError("the probe of the write scope was accepted")
+
+    async def probe_write_scope(self, home_id: str) -> bool:
+        """`has_write_scope`, except that it never stands in the way of reading.
+
+        A refused token and an unreachable server are the caller's to handle. Any other
+        answer (a 400, a 405, a 5xx, a 200: behaviour the API does not promise) leaves
+        the scope unknown, so the lists stay read only and the reads go on. The warning
+        carries neither the token nor the address.
+        """
+        try:
+            return await self.has_write_scope(home_id)
+        except HouseCairnAuthError, HouseCairnConnectionError:
+            raise
+        except HouseCairnError as exc:
+            _LOGGER.warning(
+                "Housecairn gave an unexpected answer to the probe of the write scope (%s); "
+                "the to-do list stays read only",
+                exc,
+            )
+            return False
+
+    async def rooms(self, home_id: str) -> Rows[Room]:
+        """The rooms of the home (`GET /rooms/`)."""
+        rows = await self._list(f"/homes/{home_id}/rooms/", {})
+        return Rows([Room.from_api(row) for row in rows.items], rows.complete)
 
     async def low_stock(self, home_id: str) -> Rows[Article]:
         """Stock items at or below their threshold (`GET /articles/?low=true`)."""
@@ -216,11 +324,23 @@ class HouseCairnClient:
         return Rows(items, complete=False)
 
     async def _get(self, path: str, params: dict[str, str]) -> dict[str, Any]:
+        return await self._request("GET", path, params)
+
+    async def _request(
+        self,
+        method: str,
+        path: str,
+        params: dict[str, str] | None = None,
+        *,
+        json: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         headers = {"Authorization": f"Bearer {self._token}", "Accept": "application/json"}
         try:
-            async with self._session.get(
+            async with self._session.request(
+                method,
                 self._base + path,
                 params=params,
+                json=json,
                 headers=headers,
                 timeout=REQUEST_TIMEOUT,
                 allow_redirects=False,
@@ -243,11 +363,24 @@ class HouseCairnClient:
             raise HouseCairnScopeError("the token lacks the scope this request needs")
         if status == 404:
             raise HouseCairnNotFoundError(path)
+        if status == 400:
+            raise HouseCairnRejectedError(_detail_of(body))
         if status != 200:
             raise HouseCairnResponseError(f"HTTP {status}")
         if not isinstance(body, dict):
             raise HouseCairnResponseError("not a JSON object")
         return body
+
+
+def _detail_of(body: Any) -> str:
+    """The message of a 400 (`{"detail": ["..."]}`), for the logs only."""
+    if isinstance(body, dict):
+        detail = body.get("detail")
+        if isinstance(detail, list):
+            return " ".join(str(part) for part in detail)
+        if detail:
+            return str(detail)
+    return ""
 
 
 def _cursor_of(link: Any) -> str | None:

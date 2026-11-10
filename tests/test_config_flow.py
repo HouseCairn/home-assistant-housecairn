@@ -18,7 +18,7 @@ from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClien
 
 from custom_components.housecairn.const import CONF_HOME_ID, DOMAIN
 
-from .conftest import API, HOME_ID, NEW_TOKEN, TOKEN, URL, load
+from .conftest import API, HOME_ID, NEW_TOKEN, PROBE, TOKEN, URL, load
 
 USER_INPUT = {CONF_URL: URL, CONF_API_TOKEN: TOKEN, CONF_VERIFY_SSL: True}
 OTHER_HOME = "0b9f6c55-2f4e-4d8a-9a43-6e1f0d6c2a11"
@@ -102,6 +102,7 @@ async def test_errors_then_recovery(
 
     aioclient_mock.clear_requests()
     answer("/homes/", "homes")
+    answer(PROBE, "write_probe_not_found", method="post")
     result = await _submit(hass, result["flow_id"], USER_INPUT)
     assert result["type"] is FlowResultType.CREATE_ENTRY
 
@@ -154,6 +155,11 @@ async def test_token_with_several_homes_asks_which(
     hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
 ) -> None:
     aioclient_mock.get(f"{API}/homes/", json=_two_homes())
+    aioclient_mock.post(
+        f"{API}{PROBE.replace(HOME_ID, OTHER_HOME)}",
+        status=404,
+        json={"detail": "No Occurrence matches"},
+    )
     result = await _start(hass)
 
     result = await _submit(hass, result["flow_id"], USER_INPUT)
@@ -253,3 +259,136 @@ async def test_reauth_refuses_a_locked_home(
     result = await _submit(hass, result["flow_id"], {CONF_API_TOKEN: NEW_TOKEN})
 
     assert result["errors"] == {"base": "home_locked"}
+
+
+# ---------- the address, and what the token may do ----------
+
+
+async def test_an_address_with_a_path_is_kept_in_every_request(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+) -> None:
+    """Housecairn behind a prefix: the path is saved and every call goes through it."""
+    base = "https://example.com/housecairn/api/v1"
+    homes = load("homes")
+    aioclient_mock.get(f"{base}/homes/", json=homes["body"])
+    aioclient_mock.post(
+        f"{base}/homes/{HOME_ID}/occurrences/00000000-0000-0000-0000-000000000000/undo/",
+        status=404,
+        json=load("write_probe_not_found")["body"],
+    )
+    result = await _start(hass)
+
+    result = await _submit(
+        hass, result["flow_id"], {**USER_INPUT, CONF_URL: "https://example.com/housecairn/"}
+    )
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["data"][CONF_URL] == "https://example.com/housecairn"
+    assert {url.path for _m, url, _d, _h in aioclient_mock.mock_calls} >= {
+        "/housecairn/api/v1/homes/"
+    }
+    assert all(
+        url.path.startswith("/housecairn/api/v1/") for _m, url, _d, _h in aioclient_mock.mock_calls
+    )
+
+
+@pytest.mark.usefixtures("mock_api")
+@pytest.mark.parametrize("write_token", [False])
+async def test_a_read_only_token_is_told_so_then_accepted(hass: HomeAssistant) -> None:
+    result = await _start(hass)
+
+    result = await _submit(hass, result["flow_id"], USER_INPUT)
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "read_only"
+    assert result["description_placeholders"] == {"home": "Main house"}
+    result = await _submit(hass, result["flow_id"], {})
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["result"].unique_id == HOME_ID
+
+
+@pytest.mark.usefixtures("mock_api")
+async def test_a_token_that_can_write_is_not_told_anything(hass: HomeAssistant) -> None:
+    result = await _start(hass)
+
+    result = await _submit(hass, result["flow_id"], USER_INPUT)
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+
+
+@pytest.mark.usefixtures("no_token_in_logs")
+async def test_the_scope_cannot_be_told_aborts_the_flow(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker, answer: Callable[..., None]
+) -> None:
+    aioclient_mock.clear_requests()
+    answer("/homes/", "homes")
+    aioclient_mock.post(f"{API}{PROBE}", exc=aiohttp.ClientConnectionError())
+    result = await _start(hass)
+
+    result = await _submit(hass, result["flow_id"], USER_INPUT)
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "probe_failed"
+
+
+@pytest.mark.parametrize("status", [400, 405, 500, 200])
+@pytest.mark.usefixtures("no_token_in_logs")
+async def test_an_unexpected_probe_answer_gives_a_read_only_entry(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    answer: Callable[..., None],
+    status: int,
+) -> None:
+    """The scope stays unknown, which is no reason to refuse a token that can read."""
+    aioclient_mock.clear_requests()
+    answer("/homes/", "homes")
+    aioclient_mock.post(f"{API}{PROBE}", status=status, json=load("occurrence_done")["body"])
+    result = await _start(hass)
+
+    result = await _submit(hass, result["flow_id"], USER_INPUT)
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "read_only"
+    result = await _submit(hass, result["flow_id"], {})
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+
+
+@pytest.mark.parametrize("status", [400, 405, 500, 200])
+async def test_reauth_with_an_unexpected_probe_answer_saves_the_token(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    answer: Callable[..., None],
+    mock_entry: MockConfigEntry,
+    status: int,
+) -> None:
+    mock_entry.add_to_hass(hass)
+    aioclient_mock.clear_requests()
+    answer(f"/homes/{HOME_ID}/", "home")
+    aioclient_mock.post(f"{API}{PROBE}", status=status, json=load("occurrence_done")["body"])
+    result = await mock_entry.start_reauth_flow(hass)
+
+    result = await _submit(hass, result["flow_id"], {CONF_API_TOKEN: NEW_TOKEN})
+
+    assert result["step_id"] == "reauth_read_only"
+    result = await _submit(hass, result["flow_id"], {})
+    assert result["reason"] == "reauth_successful"
+    assert mock_entry.data[CONF_API_TOKEN] == NEW_TOKEN
+
+
+@pytest.mark.parametrize("write_token", [False])
+async def test_reauth_with_a_read_only_token_says_so_then_saves_it(
+    hass: HomeAssistant, answer: Callable[..., None], mock_entry: MockConfigEntry
+) -> None:
+    mock_entry.add_to_hass(hass)
+    answer(f"/homes/{HOME_ID}/", "home")
+    result = await mock_entry.start_reauth_flow(hass)
+
+    result = await _submit(hass, result["flow_id"], {CONF_API_TOKEN: NEW_TOKEN})
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "reauth_read_only"
+    assert mock_entry.data[CONF_API_TOKEN] == TOKEN
+    result = await _submit(hass, result["flow_id"], {})
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "reauth_successful"
+    assert mock_entry.data[CONF_API_TOKEN] == NEW_TOKEN

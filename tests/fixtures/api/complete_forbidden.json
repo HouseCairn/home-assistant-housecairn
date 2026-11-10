@@ -1,0 +1,6 @@
+{
+  "status": 403,
+  "body": {
+    "detail": "This token does not have the scope this request needs."
+  }
+}

@@ -13,15 +13,13 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import CONF_URL
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .api import Article, Occurrence
-from .const import ATTRIBUTE_ROWS, DOMAIN
+from .const import ATTRIBUTE_ROWS
 from .coordinator import HouseCairnConfigEntry, HouseCairnCoordinator, HouseCairnData
+from .entity import HouseCairnEntity
 
 # Coordinator-based: updates are centralised, nothing to limit per entity.
 PARALLEL_UPDATES = 0
@@ -111,10 +109,9 @@ async def async_setup_entry(
     async_add_entities(HouseCairnSensor(coordinator, description) for description in SENSORS)
 
 
-class HouseCairnSensor(CoordinatorEntity[HouseCairnCoordinator], SensorEntity):
+class HouseCairnSensor(HouseCairnEntity, SensorEntity):
     """A sensor of a home; unavailable while the last update failed."""
 
-    _attr_has_entity_name = True
     entity_description: HouseCairnSensorDescription
 
     def __init__(
@@ -122,16 +119,7 @@ class HouseCairnSensor(CoordinatorEntity[HouseCairnCoordinator], SensorEntity):
     ) -> None:
         super().__init__(coordinator)
         self.entity_description = description
-        entry = coordinator.config_entry
         self._attr_unique_id = f"{coordinator.home_id}_{description.key}"
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, coordinator.home_id)},
-            name=entry.title,
-            manufacturer="Housecairn",
-            model="Home",
-            entry_type=DeviceEntryType.SERVICE,
-            configuration_url=entry.data[CONF_URL],
-        )
 
     @property
     def native_value(self) -> int | datetime.date | None:

@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Se connecter à Housecairn",
-        "description": "Créez dans Housecairn un jeton d'API avec la portée `read`, lié au logement à afficher. Home Assistant appelle Housecairn avec ce jeton ; Housecairn ne reçoit jamais de jeton Home Assistant.",
+        "description": "Créez un jeton d'API dans Housecairn (Plus, Moi, Jetons d'API), lié au logement à afficher. Donnez-lui le droit Lecture pour voir les tâches, et Lecture et Écriture pour aussi les marquer comme faites depuis Home Assistant. Home Assistant appelle Housecairn avec ce jeton ; Housecairn ne reçoit jamais de jeton Home Assistant.",
         "data": {
           "url": "Adresse de Housecairn",
           "api_token": "Jeton d'API Housecairn",
@@ -24,10 +24,18 @@
       },
       "reauth_confirm": {
         "title": "Nouveau jeton pour {home}",
-        "description": "Housecairn a refusé le jeton : il a expiré, a été révoqué ou n'est plus lié à ce logement. Créez un nouveau jeton avec la portée `read`, lié à ce logement.",
+        "description": "Housecairn a refusé le jeton : il a expiré, a été révoqué ou n'est plus lié à ce logement. Créez dans Housecairn (Plus, Moi, Jetons d'API) un nouveau jeton lié à ce logement, avec le droit Lecture, et le droit Écriture pour marquer les tâches comme faites.",
         "data": {
           "api_token": "Jeton d'API Housecairn"
         }
+      },
+      "read_only": {
+        "title": "Jeton en lecture seule",
+        "description": "Ce jeton peut lire {home} mais pas le modifier : la liste de tâches s'affiche, mais les tâches ne peuvent pas être marquées comme faites depuis Home Assistant. Pour l'autoriser, créez dans Housecairn (Plus, Moi, Jetons d'API) un jeton avec les droits Lecture et Écriture, puis configurez de nouveau l'intégration. Continuez pour ajouter le logement en lecture seule."
+      },
+      "reauth_read_only": {
+        "title": "Jeton en lecture seule",
+        "description": "Le nouveau jeton fonctionne mais ne peut pas modifier {home} : les tâches ne pourront pas être marquées comme faites depuis Home Assistant tant qu'un jeton avec les droits Lecture et Écriture n'est pas enregistré. Continuez pour l'enregistrer quand même."
       }
     },
     "error": {
@@ -35,7 +43,7 @@
       "cannot_connect": "Housecairn est injoignable à cette adresse.",
       "ssl_error": "Le certificat TLS du serveur a été refusé.",
       "invalid_auth": "Housecairn a refusé le jeton : il est invalide, expiré ou révoqué.",
-      "insufficient_scope": "Le jeton n'a pas la portée `read`.",
+      "insufficient_scope": "Le jeton n'a pas le droit Lecture.",
       "no_homes": "Le jeton n'est lié à aucun logement.",
       "home_locked": "Ce logement exige une connexion par un fournisseur d'identité ; un jeton d'API ne peut pas l'ouvrir.",
       "wrong_home": "Le jeton n'est pas lié à ce logement.",
@@ -43,7 +51,8 @@
     },
     "abort": {
       "already_configured": "Ce logement est déjà configuré.",
-      "reauth_successful": "Le nouveau jeton est enregistré."
+      "reauth_successful": "Le nouveau jeton est enregistré.",
+      "probe_failed": "Housecairn n'a pas pu dire ce que ce jeton peut faire. Réessayez."
     }
   },
   "entity": {
@@ -60,6 +69,11 @@
       "low_stock_items": {
         "name": "Articles sous le seuil"
       }
+    },
+    "todo": {
+      "tasks": {
+        "name": "Tâches"
+      }
     }
   },
   "exceptions": {
@@ -74,6 +88,21 @@
     },
     "unexpected_response": {
       "message": "Réponse inattendue de Housecairn : {error}"
+    },
+    "occurrence_gone": {
+      "message": "{task} n'est plus dans la liste : la tâche a été faite, ignorée ou supprimée dans Housecairn. La liste a été actualisée."
+    },
+    "already_closed": {
+      "message": "{task} était déjà marquée comme faite ou ignorée dans Housecairn. La liste a été actualisée."
+    },
+    "completion_refused": {
+      "message": "Housecairn a refusé de marquer {task} comme faite. La liste a été actualisée."
+    },
+    "write_scope_missing": {
+      "message": "Le jeton Housecairn n'a pas le droit Écriture : les tâches ne peuvent pas être marquées comme faites. Créez un jeton avec les droits Lecture et Écriture et configurez de nouveau l'intégration."
+    },
+    "only_done": {
+      "message": "Depuis Home Assistant, une liste Housecairn permet seulement de marquer une tâche comme faite ; modifiez le reste dans Housecairn."
     }
   }
 }

@@ -5689,6 +5689,60 @@ paths:
               schema:
                 $ref: '#/components/schemas/Export'
           description: ''
+  /api/v1/me/tokens/:
+    get:
+      operationId: me_tokens_list
+      tags:
+      - me
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Token'
+          description: ''
+    post:
+      operationId: me_tokens_create
+      tags:
+      - me
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenCreateRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Token'
+          description: ''
+  /api/v1/me/tokens/{token_id}/:
+    delete:
+      operationId: me_tokens_destroy
+      description: 'Revoke a token: it stops working with the next request that uses
+        it.'
+      parameters:
+      - in: path
+        name: token_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - me
+      security:
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
 components:
   schemas:
     AccountDeletionRequest:
@@ -6786,6 +6840,16 @@ components:
           additionalProperties: {}
       required:
       - kind
+    ExpiresInDaysEnum:
+      enum:
+      - 30
+      - 90
+      - 365
+      type: integer
+      description: |-
+        * `30` - 30
+        * `90` - 90
+        * `365` - 365
     Export:
       type: object
       properties:
@@ -10544,6 +10608,16 @@ components:
       description: |-
         * `home` - Home
         * `instance` - Instance
+    ScopesEnum:
+      enum:
+      - read
+      - write
+      - events
+      type: string
+      description: |-
+        * `read` - Read
+        * `write` - Write
+        * `events` - Post events
     SearchResults:
       type: object
       properties:
@@ -11134,6 +11208,91 @@ components:
         * `room` - Room
         * `person` - Person
         * `calendar` - Calendar
+    Token:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        prefix:
+          type: string
+          readOnly: true
+        scopes:
+          readOnly: true
+        homes:
+          type: array
+          items:
+            type: string
+            format: uuid
+          readOnly: true
+          description: The ids of the homes the token opens.
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        expires_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+          readOnly: true
+        last_used_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+          readOnly: true
+        token:
+          type: string
+          readOnly: true
+          description: 'The secret (`hc_...`). Only in the answer that creates the
+            token, and never again: only a digest is kept.'
+      required:
+      - created_at
+      - expires_at
+      - homes
+      - id
+      - last_used_at
+      - name
+      - prefix
+      - scopes
+      - token
+    TokenCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          description: What the token is for.
+          maxLength: 100
+        scopes:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScopesEnum'
+          description: '`read` (the default), `write` and `events`. They do not imply
+            each other.'
+        homes:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: The homes the token opens, among those of the person.
+        expires_in_days:
+          allOf:
+          - $ref: '#/components/schemas/ExpiresInDaysEnum'
+          description: |-
+            Lifetime in days: 30, 90 or 365. There is no token without an expiry. Defaults to the lifetime of the instance, 90 days unless it is set otherwise.
+
+            * `30` - 30
+            * `90` - 90
+            * `365` - 365
+      required:
+      - homes
+      - name
     TradeEnum:
       enum:
       - plumber

@@ -10,7 +10,7 @@ The rule does not change from one lot to the next: Home Assistant calls
 Housecairn with a Housecairn token; Housecairn never holds a Home Assistant
 token.
 
-## Lot 1: setup and sensors (this version)
+## Lot 1: setup and sensors (0.1.0)
 
 Config flow (address, token, TLS verified by default, one entry per home,
 reauthentication), a coordinator, four sensors per home, diagnostics, English
@@ -26,17 +26,14 @@ Uses, with a `read` token:
 
 Missing in the API, by endpoint:
 
-- **Token management, for people.** Tokens are issued only by
-  `apitokens.services.issue_token`: there is no screen, no endpoint and no
-  management command to create one, and the admin site can list and revoke
-  only. Until the "data and API" lot of Housecairn adds them, a person cannot
-  create the token this integration asks for. Needed: a screen, and
-  `POST/GET/DELETE /me/tokens/` (create with name, scopes, homes and expiry;
-  list; revoke).
+- **Token management, for people: done in Housecairn** (More, Me, API tokens;
+  `POST/GET/DELETE /me/tokens/`, session only by design, so Home Assistant never
+  manages tokens itself). Nothing left to ask.
 - **`GET /me/token/`**, the token that authenticates the request: scopes, homes,
-  expiry. The integration could then check the scope at setup without guessing
-  from a 403, and warn (a repair issue) before the token expires instead of
-  after.
+  expiry. Still missing. The integration cannot read its own scopes, so lot 2
+  finds out whether the token has `write` by a request that changes nothing
+  (see lot 2); with this endpoint it would read them, and it could warn (a
+  repair issue) before the token expires instead of after.
 - **`GET /homes/{home_id}/summary/`** (or counts on the lists): overdue count,
   count due on a given day, next due date, low stock count, in one request. The
   lists are paged by cursor without a count, so the integration makes three
@@ -49,31 +46,67 @@ Missing in the API, by endpoint:
   (docs/adr/0021), not a gap; the integration refuses such a home and says why.
   If Home Assistant must show such homes, Housecairn needs a token rule for them.
 
-## Lot 2: to-do lists with "Done"
+## Lot 2: to-do list with "Done" (0.2.0, this version)
 
-One `todo` entity per home (later perhaps per room or per person): the open
-occurrences, and the recently closed ones in the completed section. Checking an
-item completes the occurrence; unchecking it undoes the completion. Needs a
-token with `read` and `write`.
+One `todo` entity per home: the open occurrences that are overdue, due today or
+due in the next 14 days, with their date and their room as the description.
+Checking an item completes the occurrence (`POST .../complete/`, today's date, no
+cost or note); the coordinator is refreshed right after. Needs a token with
+`read` and `write`; with `read` only, the entity exists and has no check box.
+Setup and reauthentication say so.
 
-Available: `GET /homes/{home_id}/occurrences/` (`status`, `closed_after`),
-`POST /homes/{home_id}/occurrences/{occurrence_id}/complete/` and `.../undo/`,
-`POST /homes/{home_id}/tasks/` (create with a title only),
-`PATCH` and `DELETE /homes/{home_id}/tasks/{task_id}/`.
+Uses:
+
+- `GET /homes/{home_id}/occurrences/?overdue=true` and
+  `?status=open&due_after=<today>&include_hidden=true`, the two lists of the
+  sensors (no extra request: the second is read up to 14 days ahead instead of up
+  to today). Rows whose `visible_from` is still ahead are left out, as in
+  Housecairn; rows past 14 days are left out.
+- `GET /homes/{home_id}/rooms/`, once, and again only when a listed task has a
+  room not seen yet.
+- `POST /homes/{home_id}/occurrences/{occurrence_id}/complete/` with an empty body.
+- `GET /homes/{home_id}/occurrences/{occurrence_id}/`, only after a 400 on
+  `complete`, to tell "closed meanwhile" from another refusal.
+- `POST .../occurrences/00000000-0000-0000-0000-000000000000/undo/`, once per
+  setup, as the probe of the `write` scope: the scope is checked before the
+  occurrence is looked up, so the answer is 403 without `write` and 404 with it,
+  and nothing can change (the occurrence cannot exist). Captured from
+  Housecairn itself (`tests/fixtures/api/write_probe_*.json`).
+  Any other answer (400, 405, 5xx, 200) leaves the scope unknown: the list stays
+  read-only, a warning is logged and the reads go on. Only a refused token (401)
+  or an unreachable server stops the setup.
+
+Chosen, and why:
+
+- **No creation, rename, re-dating or deletion from Home Assistant.** The API can
+  create a task (`POST /homes/{home_id}/tasks/`) but only without a date, which
+  this list would not show; and it can delete a task (`DELETE
+  /homes/{home_id}/tasks/{task_id}/`) but that removes the task with all of its
+  occurrences, not a line of a list. Neither is "properly" a to-do item. Done is the
+  only action.
+- **Undone is not offered.** `POST .../undo/` exists, but a done occurrence leaves
+  the list, so there is no checked item to uncheck. A section of recently closed
+  items (`closed_after`) would add one, at the price of a request: not in this lot.
+- **Tasks without a date are not listed** (see below).
 
 Missing in the API, by endpoint:
 
+- `POST .../complete/`, `.../postpone/`, `.../skip/`, `.../undo/`: a stable error
+  `code`. An occurrence that is already closed answers `400
+  {"detail": ["This occurrence is already closed."]}`, a message
+  and no code. The integration therefore reads the occurrence
+  after any 400 on `complete` (`status` done or skipped means closed meanwhile)
+  instead of parsing the message. A code (say `occurrence_closed`) in the body,
+  or a 409, would save that request and make the answer reliable.
+- `GET /me/token/` (lot 1): the scopes of the token, instead of the probe above.
+- `GET /homes/{home_id}/occurrences/`: a filter on undated occurrences (for
+  example `due=none`). They sort last and have no `due_before` match, so listing
+  them means reading the whole list.
+- `GET /homes/{home_id}/occurrences/`: the room name and the task notes in each
+  row. The room is an id; the names come from `GET /rooms/`. Notes are not in the
+  row at all.
 - `GET /homes/{home_id}/occurrences/`: an `updated_after` filter, so an update
-  reads what changed instead of the whole list;
-- `GET /homes/{home_id}/occurrences/`: the task `notes` (or a short
-  description) and the room name in each row, for the item description,
-  without one request per task;
-- `POST .../complete/` is safe to retry: a second call on the same occurrence
-  is refused because it is no longer open (`tasks.services._require_open`). A
-  stable error `code` for that refusal would let the integration treat it as
-  done without parsing a message;
-- `GET /me/token/` (lot 1), to tell the person at setup that the token lacks
-  `write` instead of failing at the first "Done".
+  reads what changed instead of the whole lists.
 
 ## Lot 3: calendar
 
@@ -122,7 +155,8 @@ Missing in the API, by endpoint:
   enough; `GET /me/token/` (lot 1) is what lets the integration offer only the
   actions its token allows.
 - `POST .../complete/`, `.../postpone/`, `.../skip/`: the stable error codes of
-  lot 2, since automations retry.
+  lot 2, since automations retry. The `complete` call and the client written for
+  lot 2 exist already (`HouseCairnClient.complete`); postpone and skip do not.
 
 ## Before an announcement
 

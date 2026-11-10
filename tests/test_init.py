@@ -20,7 +20,7 @@ from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClien
 from custom_components.housecairn.const import DOMAIN, UPDATE_INTERVAL
 from custom_components.housecairn.diagnostics import async_get_config_entry_diagnostics
 
-from .conftest import API, DAY, HOME_ID, TOKEN, URL, load
+from .conftest import API, DAY, HOME_ID, PROBE, TOKEN, URL, load
 
 OVERDUE = "sensor.main_house_overdue_tasks"
 TODAY = "sensor.main_house_tasks_due_today"
@@ -63,8 +63,10 @@ async def test_sensors(
         {"name": "AA batteries", "quantity": 0.0, "threshold": 4.0, "unit": "piece"},
         {"name": "Ventilation filter G4", "quantity": 1.0, "threshold": 2.0, "unit": "piece"},
     ]
-    # Three requests per update, all with the token in the header only.
-    assert aioclient_mock.call_count == 3
+    # The probe of the write scope at setup, then three requests per update, all with
+    # the token in the header only.
+    assert aioclient_mock.call_count == 4
+    assert [method for method, *_ in aioclient_mock.mock_calls].count("POST") == 1
     for _method, url, _data, headers in aioclient_mock.mock_calls:
         assert url.host == "housecairn.example.com"
         assert headers["Authorization"] == f"Bearer {TOKEN}"
@@ -87,7 +89,13 @@ async def test_one_device_per_home(
     entities = er.async_entries_for_config_entry(entity_registry, entry.entry_id)
     assert sorted(e.unique_id for e in entities) == sorted(
         f"{HOME_ID}_{key}"
-        for key in ("overdue_tasks", "tasks_due_today", "next_due_date", "low_stock_items")
+        for key in (
+            "overdue_tasks",
+            "tasks_due_today",
+            "next_due_date",
+            "low_stock_items",
+            "tasks",
+        )
     )
     assert {e.device_id for e in entities} == {device.id}
 
@@ -221,7 +229,8 @@ async def test_long_lists_follow_the_cursor_on_the_configured_host_only(
     aioclient_mock.get(OCCURRENCES, params={"overdue": "true"}, json=page1)
     # The list from today: its first page ends after today, so no second page is read.
     upcoming = load("occurrences_open_from_today_page1")["body"]
-    later = load("occurrences_open_from_today")["body"]["results"][2]
+    # A row past the two weeks of the to-do list: the page ends there, so no more is read.
+    later = load("todo_upcoming")["body"]["results"][-1]
     aioclient_mock.get(
         OCCURRENCES,
         params={"status": "open", "due_after": DAY},
@@ -235,7 +244,8 @@ async def test_long_lists_follow_the_cursor_on_the_configured_host_only(
     assert hass.states.get(TODAY).state == "1"  # type: ignore[union-attr]
     hosts = {url.host for _m, url, _d, _h in aioclient_mock.mock_calls}
     assert hosts == {"housecairn.example.com"}
-    assert aioclient_mock.call_count == 4
+    # The probe, two pages of overdue tasks, one of upcoming ones, the stock.
+    assert aioclient_mock.call_count == 5
 
 
 async def test_tasks_of_the_day_read_the_next_page_while_it_is_still_today(
@@ -291,7 +301,89 @@ async def test_diagnostics_redact_the_token_and_the_content(
         "next_due_on": DAY,
         "low_stock": 2,
         "low_stock_complete": True,
+        "todo": 5,
+        "todo_complete": True,
     }
+    assert diagnostics["can_write"] is True
     text = str(diagnostics)
     for secret in (TOKEN, "example.com", "Main house", "gutters", "batteries"):
         assert secret not in text
+
+
+@pytest.mark.usefixtures("mock_api", "no_token_in_logs")
+async def test_setup_retries_when_the_write_probe_cannot_be_answered(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker, setup_entry: Callable[[], Any]
+) -> None:
+    aioclient_mock.clear_requests()
+    aioclient_mock.post(f"{API}{PROBE}", exc=aiohttp.ClientConnectionError())
+    # The reads of the first refresh succeed; only the probe fails.
+    for name, params in (
+        ("occurrences_overdue", {"overdue": "true"}),
+        ("occurrences_open_from_today", {"status": "open", "due_after": DAY}),
+    ):
+        aioclient_mock.get(OCCURRENCES, params=params, json=load(name)["body"])
+    aioclient_mock.get(f"{API}/homes/{HOME_ID}/articles/", json=load("articles_low")["body"])
+
+    entry = await setup_entry()
+
+    assert entry.state is ConfigEntryState.SETUP_RETRY
+
+
+@pytest.mark.parametrize("status", [400, 405, 500, 200])
+@pytest.mark.usefixtures("mock_api", "no_token_in_logs")
+async def test_an_unexpected_write_probe_never_blocks_the_reads(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    setup_entry: Callable[[], Any],
+    caplog: pytest.LogCaptureFixture,
+    status: int,
+) -> None:
+    """A probe answer the API does not promise leaves the list read only, not the entry down."""
+    aioclient_mock.clear_requests()
+    aioclient_mock.post(f"{API}{PROBE}", status=status, json=load("occurrence_done")["body"])
+    for name, params in (
+        ("occurrences_overdue", {"overdue": "true"}),
+        ("occurrences_open_from_today", {"status": "open", "due_after": DAY}),
+    ):
+        aioclient_mock.get(OCCURRENCES, params=params, json=load(name)["body"])
+    aioclient_mock.get(f"{API}/homes/{HOME_ID}/articles/", json=load("articles_low")["body"])
+    aioclient_mock.get(f"{API}/homes/{HOME_ID}/rooms/", json=load("rooms")["body"])
+
+    entry = await setup_entry()
+
+    assert entry.state is ConfigEntryState.LOADED
+    assert entry.runtime_data.can_write is False
+    assert entry.runtime_data.data.todo
+    todo = hass.states.get("todo.main_house_tasks")
+    assert todo is not None
+    assert todo.state != STATE_UNAVAILABLE
+    assert todo.attributes["supported_features"] == 0
+    for sensor in hass.states.async_all("sensor"):
+        assert sensor.state != STATE_UNAVAILABLE
+    assert any(
+        record.levelname == "WARNING" and "probe of the write scope" in record.getMessage()
+        for record in caplog.records
+    )
+    assert "example.com" not in caplog.text
+
+
+@pytest.mark.usefixtures("mock_api", "no_token_in_logs")
+async def test_setup_starts_reauth_when_the_write_probe_is_refused(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker, setup_entry: Callable[[], Any]
+) -> None:
+    aioclient_mock.clear_requests()
+    aioclient_mock.post(
+        f"{API}{PROBE}", status=401, json={"detail": "Invalid, expired or revoked token."}
+    )
+    for name, params in (
+        ("occurrences_overdue", {"overdue": "true"}),
+        ("occurrences_open_from_today", {"status": "open", "due_after": DAY}),
+    ):
+        aioclient_mock.get(OCCURRENCES, params=params, json=load(name)["body"])
+    aioclient_mock.get(f"{API}/homes/{HOME_ID}/articles/", json=load("articles_low")["body"])
+
+    entry = await setup_entry()
+
+    assert entry.state is ConfigEntryState.SETUP_ERROR
+    flows = hass.config_entries.flow.async_progress()
+    assert [(f["handler"], f["context"]["source"]) for f in flows] == [(DOMAIN, SOURCE_REAUTH)]
