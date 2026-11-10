@@ -1,0 +1,79 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Se connecter à Housecairn",
+        "description": "Créez dans Housecairn un jeton d'API avec la portée `read`, lié au logement à afficher. Home Assistant appelle Housecairn avec ce jeton ; Housecairn ne reçoit jamais de jeton Home Assistant.",
+        "data": {
+          "url": "Adresse de Housecairn",
+          "api_token": "Jeton d'API Housecairn",
+          "verify_ssl": "Vérifier le certificat TLS"
+        },
+        "data_description": {
+          "url": "Par exemple {example_url}",
+          "api_token": "Commence par hc_. Il n'est enregistré que dans cette entrée de configuration.",
+          "verify_ssl": "Laissez activé, sauf si le certificat est un certificat de confiance que Home Assistant ne connaît pas."
+        }
+      },
+      "home": {
+        "title": "Choisir le logement",
+        "description": "Ce jeton est lié à plusieurs logements. Chaque logement s'ajoute à part ; ajoutez le suivant en configurant de nouveau l'intégration.",
+        "data": {
+          "home_id": "Logement"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Nouveau jeton pour {home}",
+        "description": "Housecairn a refusé le jeton : il a expiré, a été révoqué ou n'est plus lié à ce logement. Créez un nouveau jeton avec la portée `read`, lié à ce logement.",
+        "data": {
+          "api_token": "Jeton d'API Housecairn"
+        }
+      }
+    },
+    "error": {
+      "invalid_url": "Saisissez une adresse http ou https, sans paramètres ni identifiants.",
+      "cannot_connect": "Housecairn est injoignable à cette adresse.",
+      "ssl_error": "Le certificat TLS du serveur a été refusé.",
+      "invalid_auth": "Housecairn a refusé le jeton : il est invalide, expiré ou révoqué.",
+      "insufficient_scope": "Le jeton n'a pas la portée `read`.",
+      "no_homes": "Le jeton n'est lié à aucun logement.",
+      "home_locked": "Ce logement exige une connexion par un fournisseur d'identité ; un jeton d'API ne peut pas l'ouvrir.",
+      "wrong_home": "Le jeton n'est pas lié à ce logement.",
+      "unknown": "Réponse inattendue de Housecairn."
+    },
+    "abort": {
+      "already_configured": "Ce logement est déjà configuré.",
+      "reauth_successful": "Le nouveau jeton est enregistré."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "overdue_tasks": {
+        "name": "Tâches en retard"
+      },
+      "tasks_due_today": {
+        "name": "Tâches du jour"
+      },
+      "next_due_date": {
+        "name": "Prochaine échéance"
+      },
+      "low_stock_items": {
+        "name": "Articles sous le seuil"
+      }
+    }
+  },
+  "exceptions": {
+    "auth_failed": {
+      "message": "Housecairn a refusé le jeton."
+    },
+    "home_locked": {
+      "message": "Ce logement exige une connexion par un fournisseur d'identité ; un jeton d'API ne peut pas l'ouvrir."
+    },
+    "cannot_connect": {
+      "message": "Housecairn est injoignable."
+    },
+    "unexpected_response": {
+      "message": "Réponse inattendue de Housecairn : {error}"
+    }
+  }
+}

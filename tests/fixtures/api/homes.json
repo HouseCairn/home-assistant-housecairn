@@ -1,0 +1,20 @@
+{
+  "status": 200,
+  "body": {
+    "next": null,
+    "previous": null,
+    "results": [
+      {
+        "id": "35d1afd8-747a-41a5-971f-a8701147c27b",
+        "name": "Main house",
+        "currency": "EUR",
+        "hemisphere": "north",
+        "role": "owner",
+        "required_provider": "",
+        "locked": false,
+        "created_at": "2026-11-09T23:33:11.067131Z",
+        "updated_at": "2026-11-09T23:33:11.067187Z"
+      }
+    ]
+  }
+}

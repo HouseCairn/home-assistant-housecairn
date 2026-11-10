@@ -1,0 +1,49 @@
+[project]
+name = "home-assistant-housecairn"
+version = "0.1.0"
+description = "Home Assistant integration for Housecairn, the self-hosted home maintenance planner."
+readme = "README.md"
+license = "AGPL-3.0-only"
+requires-python = ">=3.14.2"
+# The integration itself has no requirement beyond Home Assistant (see manifest.json):
+# everything below is for development and CI only.
+dependencies = []
+
+[dependency-groups]
+dev = [
+    # Pins Home Assistant 2026.10.4, the latest release it is published for.
+    "pytest-homeassistant-custom-component==0.13.375",
+    "ruff==0.17.4",
+    "mypy==2.4.1",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+addopts = "-p no:cacheprovider"
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "SIM", "RUF", "ASYNC", "PT", "TRY"]
+# Exception messages here are short and never carry the token.
+ignore = ["TRY003"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["custom_components"]
+
+[tool.mypy]
+python_version = "3.14"
+strict = true
+warn_unreachable = true
+files = ["custom_components/housecairn"]
+plugins = []

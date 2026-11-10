@@ -1,0 +1,79 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Housecairn",
+        "description": "Create an API token in Housecairn with the `read` scope, bound to the home to show. Home Assistant calls Housecairn with this token; Housecairn never receives a Home Assistant token.",
+        "data": {
+          "url": "Address of Housecairn",
+          "api_token": "Housecairn API token",
+          "verify_ssl": "Verify the TLS certificate"
+        },
+        "data_description": {
+          "url": "For example {example_url}",
+          "api_token": "Starts with hc_. It is stored in this configuration entry only.",
+          "verify_ssl": "Leave on unless the certificate is one you trust and Home Assistant does not."
+        }
+      },
+      "home": {
+        "title": "Choose the home",
+        "description": "This token is bound to several homes. Each home is added on its own; add the next one by setting up the integration again.",
+        "data": {
+          "home_id": "Home"
+        }
+      },
+      "reauth_confirm": {
+        "title": "New token for {home}",
+        "description": "Housecairn refused the token: it has expired, was revoked, or is no longer bound to this home. Create a new token with the `read` scope, bound to this home.",
+        "data": {
+          "api_token": "Housecairn API token"
+        }
+      }
+    },
+    "error": {
+      "invalid_url": "Enter an http or https address, without query or credentials.",
+      "cannot_connect": "Housecairn could not be reached at this address.",
+      "ssl_error": "The TLS certificate of the server was refused.",
+      "invalid_auth": "Housecairn refused the token: it is invalid, expired or revoked.",
+      "insufficient_scope": "The token does not have the `read` scope.",
+      "no_homes": "The token is not bound to any home.",
+      "home_locked": "This home requires signing in through a sign-in provider; an API token cannot open it.",
+      "wrong_home": "The token is not bound to this home.",
+      "unknown": "Unexpected answer from Housecairn."
+    },
+    "abort": {
+      "already_configured": "This home is already configured.",
+      "reauth_successful": "The new token is saved."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "overdue_tasks": {
+        "name": "Overdue tasks"
+      },
+      "tasks_due_today": {
+        "name": "Tasks due today"
+      },
+      "next_due_date": {
+        "name": "Next due date"
+      },
+      "low_stock_items": {
+        "name": "Stock items below threshold"
+      }
+    }
+  },
+  "exceptions": {
+    "auth_failed": {
+      "message": "Housecairn refused the token."
+    },
+    "home_locked": {
+      "message": "This home requires signing in through a sign-in provider; an API token cannot open it."
+    },
+    "cannot_connect": {
+      "message": "Housecairn could not be reached."
+    },
+    "unexpected_response": {
+      "message": "Unexpected answer from Housecairn: {error}"
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "status": 403,
+  "body": {
+    "detail": "This home requires signing in through example-sso.",
+    "code": "sso_required",
+    "provider": "example-sso"
+  }
+}
