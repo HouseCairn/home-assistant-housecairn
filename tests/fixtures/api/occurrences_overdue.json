@@ -1,0 +1,51 @@
+{
+  "status": 200,
+  "body": {
+    "next": null,
+    "previous": null,
+    "results": [
+      {
+        "id": "e8673f76-3527-4ec4-8ea4-92be4084bd21",
+        "task": "841b3ab5-178a-42d2-bee6-6f069794944d",
+        "task_title": "Replace the smoke detector battery",
+        "room": null,
+        "item": null,
+        "status": "planned",
+        "due_on": "2026-11-06",
+        "visible_from": null,
+        "postponed_from": null,
+        "completed_on": null,
+        "completed_by": null,
+        "completed_by_name": "",
+        "assignee_name": "",
+        "actual_cost": null,
+        "completion_note": "",
+        "is_overdue": true,
+        "stock": [],
+        "created_at": "2026-11-09T23:33:11.130714Z",
+        "updated_at": "2026-11-09T23:33:11.130753Z"
+      },
+      {
+        "id": "fd45af1d-8d82-45ce-8b22-1dbe3e3c9d91",
+        "task": "3c899d41-0a32-4ff6-96c1-12ab4522cd00",
+        "task_title": "Clean the gutters",
+        "room": null,
+        "item": null,
+        "status": "planned",
+        "due_on": "2026-11-08",
+        "visible_from": null,
+        "postponed_from": null,
+        "completed_on": null,
+        "completed_by": null,
+        "completed_by_name": "",
+        "assignee_name": "",
+        "actual_cost": null,
+        "completion_note": "",
+        "is_overdue": true,
+        "stock": [],
+        "created_at": "2026-11-09T23:33:11.139455Z",
+        "updated_at": "2026-11-09T23:33:11.139480Z"
+      }
+    ]
+  }
+}

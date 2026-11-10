@@ -1,0 +1,47 @@
+{
+  "status": 200,
+  "body": {
+    "next": null,
+    "previous": null,
+    "results": [
+      {
+        "id": "2a9c0edf-e533-4d21-b185-0913b8654f08",
+        "name": "AA batteries",
+        "manufacturer_reference": "",
+        "dimensions": "",
+        "storage_location": "",
+        "unit": "piece",
+        "unit_other": "",
+        "unit_label": "piece",
+        "threshold": "4.00",
+        "quantity": "0.00",
+        "low": true,
+        "compatible_items": [],
+        "rooms": [],
+        "notes": "",
+        "label_url": null,
+        "created_at": "2026-11-09T23:33:11.243924Z",
+        "updated_at": "2026-11-09T23:33:11.243969Z"
+      },
+      {
+        "id": "6cde9300-563f-4a79-8fc5-045f13dbc11c",
+        "name": "Ventilation filter G4",
+        "manufacturer_reference": "",
+        "dimensions": "",
+        "storage_location": "",
+        "unit": "piece",
+        "unit_other": "",
+        "unit_label": "piece",
+        "threshold": "2.00",
+        "quantity": "1.00",
+        "low": true,
+        "compatible_items": [],
+        "rooms": [],
+        "notes": "",
+        "label_url": null,
+        "created_at": "2026-11-09T23:33:11.224898Z",
+        "updated_at": "2026-11-09T23:33:11.224934Z"
+      }
+    ]
+  }
+}

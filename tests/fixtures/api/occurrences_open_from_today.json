@@ -1,0 +1,72 @@
+{
+  "status": 200,
+  "body": {
+    "next": null,
+    "previous": null,
+    "results": [
+      {
+        "id": "bf195524-ee2d-4331-abcb-f24fc754af0e",
+        "task": "66e4931b-febf-4b22-bb2f-021ef63e8194",
+        "task_title": "Change the ventilation filter",
+        "room": null,
+        "item": null,
+        "status": "planned",
+        "due_on": "2026-11-09",
+        "visible_from": null,
+        "postponed_from": null,
+        "completed_on": null,
+        "completed_by": null,
+        "completed_by_name": "",
+        "assignee_name": "",
+        "actual_cost": null,
+        "completion_note": "",
+        "is_overdue": false,
+        "stock": [],
+        "created_at": "2026-11-09T23:33:11.148744Z",
+        "updated_at": "2026-11-09T23:33:11.148780Z"
+      },
+      {
+        "id": "8bedde8e-8485-4551-a2e7-85f39830ba6b",
+        "task": "4478160c-443c-40a8-ae33-f33896ea8abc",
+        "task_title": "Descale the kettle",
+        "room": null,
+        "item": null,
+        "status": "planned",
+        "due_on": "2026-11-09",
+        "visible_from": null,
+        "postponed_from": null,
+        "completed_on": null,
+        "completed_by": null,
+        "completed_by_name": "",
+        "assignee_name": "",
+        "actual_cost": null,
+        "completion_note": "",
+        "is_overdue": false,
+        "stock": [],
+        "created_at": "2026-11-09T23:33:11.157344Z",
+        "updated_at": "2026-11-09T23:33:11.157379Z"
+      },
+      {
+        "id": "c1845136-29a0-42dc-b434-3b0ea5290d23",
+        "task": "8df4c28c-7e86-4796-8992-578e0d407173",
+        "task_title": "Service the boiler",
+        "room": null,
+        "item": null,
+        "status": "planned",
+        "due_on": "2026-11-21",
+        "visible_from": null,
+        "postponed_from": null,
+        "completed_on": null,
+        "completed_by": null,
+        "completed_by_name": "",
+        "assignee_name": "",
+        "actual_cost": null,
+        "completion_note": "",
+        "is_overdue": false,
+        "stock": [],
+        "created_at": "2026-11-09T23:33:11.164376Z",
+        "updated_at": "2026-11-09T23:33:11.164402Z"
+      }
+    ]
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "status": 200,
+  "body": {
+    "next": "http://testserver/api/v1/homes/35d1afd8-747a-41a5-971f-a8701147c27b/occurrences/?cursor=bz0x&due_after=2026-11-09&include_hidden=true&page_size=1&status=open",
+    "previous": null,
+    "results": [
+      {
+        "id": "bf195524-ee2d-4331-abcb-f24fc754af0e",
+        "task": "66e4931b-febf-4b22-bb2f-021ef63e8194",
+        "task_title": "Change the ventilation filter",
+        "room": null,
+        "item": null,
+        "status": "planned",
+        "due_on": "2026-11-09",
+        "visible_from": null,
+        "postponed_from": null,
+        "completed_on": null,
+        "completed_by": null,
+        "completed_by_name": "",
+        "assignee_name": "",
+        "actual_cost": null,
+        "completion_note": "",
+        "is_overdue": false,
+        "stock": [],
+        "created_at": "2026-11-09T23:33:11.148744Z",
+        "updated_at": "2026-11-09T23:33:11.148780Z"
+      }
+    ]
+  }
+}
