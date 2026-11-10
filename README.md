@@ -16,6 +16,10 @@ what needs doing in a home as Home Assistant sensors.
 Home Assistant calls the Housecairn API (`/api/v1`) with a **Housecairn API
 token** that you create in Housecairn and paste into the setup dialog.
 
+- Housecairn has no screen to create this token yet: today it is created from
+  the Django shell of the instance. A screen to create and revoke
+  tokens is planned in Housecairn ([docs/plan.md](docs/plan.md)); until then
+  you need shell access to the instance.
 - **No Home Assistant token is ever created, asked for or sent to Housecairn.**
 - The token needs the `read` scope only, and is bound to the homes you choose
   in Housecairn. It cannot change anything.
