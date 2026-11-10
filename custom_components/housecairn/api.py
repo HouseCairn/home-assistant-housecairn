@@ -11,6 +11,7 @@ part of an address, a log line or an exception message.
 from __future__ import annotations
 
 import datetime
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from decimal import Decimal
@@ -18,6 +19,8 @@ from typing import Any, Final
 from urllib.parse import parse_qs, urlsplit
 
 import aiohttp
+
+_LOGGER = logging.getLogger(__name__)
 
 API_PREFIX: Final = "/api/v1"
 REQUEST_TIMEOUT: Final = aiohttp.ClientTimeout(total=30)
@@ -260,6 +263,26 @@ class HouseCairnClient:
         except HouseCairnNotFoundError:
             return True
         raise HouseCairnResponseError("the probe of the write scope was accepted")
+
+    async def probe_write_scope(self, home_id: str) -> bool:
+        """`has_write_scope`, except that it never stands in the way of reading.
+
+        A refused token and an unreachable server are the caller's to handle. Any other
+        answer (a 400, a 405, a 5xx, a 200: behaviour the API does not promise) leaves
+        the scope unknown, so the lists stay read only and the reads go on. The warning
+        carries neither the token nor the address.
+        """
+        try:
+            return await self.has_write_scope(home_id)
+        except HouseCairnAuthError, HouseCairnConnectionError:
+            raise
+        except HouseCairnError as exc:
+            _LOGGER.warning(
+                "Housecairn gave an unexpected answer to the probe of the write scope (%s); "
+                "the to-do list stays read only",
+                exc,
+            )
+            return False
 
     async def rooms(self, home_id: str) -> Rows[Room]:
         """The rooms of the home (`GET /rooms/`)."""

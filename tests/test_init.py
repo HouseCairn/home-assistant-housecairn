@@ -329,6 +329,44 @@ async def test_setup_retries_when_the_write_probe_cannot_be_answered(
     assert entry.state is ConfigEntryState.SETUP_RETRY
 
 
+@pytest.mark.parametrize("status", [400, 405, 500, 200])
+@pytest.mark.usefixtures("mock_api", "no_token_in_logs")
+async def test_an_unexpected_write_probe_never_blocks_the_reads(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    setup_entry: Callable[[], Any],
+    caplog: pytest.LogCaptureFixture,
+    status: int,
+) -> None:
+    """A probe answer the API does not promise leaves the list read only, not the entry down."""
+    aioclient_mock.clear_requests()
+    aioclient_mock.post(f"{API}{PROBE}", status=status, json=load("occurrence_done")["body"])
+    for name, params in (
+        ("occurrences_overdue", {"overdue": "true"}),
+        ("occurrences_open_from_today", {"status": "open", "due_after": DAY}),
+    ):
+        aioclient_mock.get(OCCURRENCES, params=params, json=load(name)["body"])
+    aioclient_mock.get(f"{API}/homes/{HOME_ID}/articles/", json=load("articles_low")["body"])
+    aioclient_mock.get(f"{API}/homes/{HOME_ID}/rooms/", json=load("rooms")["body"])
+
+    entry = await setup_entry()
+
+    assert entry.state is ConfigEntryState.LOADED
+    assert entry.runtime_data.can_write is False
+    assert entry.runtime_data.data.todo
+    todo = hass.states.get("todo.main_house_tasks")
+    assert todo is not None
+    assert todo.state != STATE_UNAVAILABLE
+    assert todo.attributes["supported_features"] == 0
+    for sensor in hass.states.async_all("sensor"):
+        assert sensor.state != STATE_UNAVAILABLE
+    assert any(
+        record.levelname == "WARNING" and "probe of the write scope" in record.getMessage()
+        for record in caplog.records
+    )
+    assert "example.com" not in caplog.text
+
+
 @pytest.mark.usefixtures("mock_api", "no_token_in_logs")
 async def test_setup_starts_reauth_when_the_write_probe_is_refused(
     hass: HomeAssistant, aioclient_mock: AiohttpClientMocker, setup_entry: Callable[[], Any]

@@ -331,6 +331,50 @@ async def test_the_scope_cannot_be_told_aborts_the_flow(
     assert result["reason"] == "probe_failed"
 
 
+@pytest.mark.parametrize("status", [400, 405, 500, 200])
+@pytest.mark.usefixtures("no_token_in_logs")
+async def test_an_unexpected_probe_answer_gives_a_read_only_entry(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    answer: Callable[..., None],
+    status: int,
+) -> None:
+    """The scope stays unknown, which is no reason to refuse a token that can read."""
+    aioclient_mock.clear_requests()
+    answer("/homes/", "homes")
+    aioclient_mock.post(f"{API}{PROBE}", status=status, json=load("occurrence_done")["body"])
+    result = await _start(hass)
+
+    result = await _submit(hass, result["flow_id"], USER_INPUT)
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "read_only"
+    result = await _submit(hass, result["flow_id"], {})
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+
+
+@pytest.mark.parametrize("status", [400, 405, 500, 200])
+async def test_reauth_with_an_unexpected_probe_answer_saves_the_token(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    answer: Callable[..., None],
+    mock_entry: MockConfigEntry,
+    status: int,
+) -> None:
+    mock_entry.add_to_hass(hass)
+    aioclient_mock.clear_requests()
+    answer(f"/homes/{HOME_ID}/", "home")
+    aioclient_mock.post(f"{API}{PROBE}", status=status, json=load("occurrence_done")["body"])
+    result = await mock_entry.start_reauth_flow(hass)
+
+    result = await _submit(hass, result["flow_id"], {CONF_API_TOKEN: NEW_TOKEN})
+
+    assert result["step_id"] == "reauth_read_only"
+    result = await _submit(hass, result["flow_id"], {})
+    assert result["reason"] == "reauth_successful"
+    assert mock_entry.data[CONF_API_TOKEN] == NEW_TOKEN
+
+
 @pytest.mark.parametrize("write_token", [False])
 async def test_reauth_with_a_read_only_token_says_so_then_saves_it(
     hass: HomeAssistant, answer: Callable[..., None], mock_entry: MockConfigEntry

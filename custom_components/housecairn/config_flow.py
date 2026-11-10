@@ -137,7 +137,7 @@ class HouseCairnConfigFlow(ConfigFlow, domain=DOMAIN):
                 self._input[CONF_URL], self._input[CONF_API_TOKEN], self._input[CONF_VERIFY_SSL]
             )
             try:
-                can_write = await client.has_write_scope(home.id)
+                can_write = await client.probe_write_scope(home.id)
             except HouseCairnError as exc:
                 _LOGGER.warning("Could not tell what the token may do: %s", exc)
                 return self.async_abort(reason="probe_failed")
@@ -194,7 +194,7 @@ class HouseCairnConfigFlow(ConfigFlow, domain=DOMAIN):
                 if home.locked:
                     raise HouseCairnHomeLockedError("locked")
                 # GET /homes/{id}/ needs `read`; so does every call of the integration.
-                can_write = await client.has_write_scope(entry.data[CONF_HOME_ID])
+                can_write = await client.probe_write_scope(entry.data[CONF_HOME_ID])
             except HouseCairnError as exc:
                 errors["base"] = _error_key(exc)
                 if errors["base"] == "unknown":

@@ -72,6 +72,9 @@ Uses:
   occurrence is looked up, so the answer is 403 without `write` and 404 with it,
   and nothing can change (the occurrence cannot exist). Captured from
   Housecairn itself (`tests/fixtures/api/write_probe_*.json`).
+  Any other answer (400, 405, 5xx, 200) leaves the scope unknown: the list stays
+  read-only, a warning is logged and the reads go on. Only a refused token (401)
+  or an unreachable server stops the setup.
 
 Chosen, and why:
 

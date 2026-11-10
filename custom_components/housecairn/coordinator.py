@@ -77,12 +77,12 @@ class HouseCairnCoordinator(DataUpdateCoordinator[HouseCairnData]):
     async def async_probe_write(self) -> None:
         """Find out whether the token has the `write` scope; nothing is changed."""
         try:
-            self.can_write = await self.client.has_write_scope(self.home_id)
+            self.can_write = await self.client.probe_write_scope(self.home_id)
         except HouseCairnAuthError as exc:
             raise ConfigEntryAuthFailed(
                 translation_domain=DOMAIN, translation_key="auth_failed"
             ) from exc
-        except HouseCairnError as exc:
+        except HouseCairnConnectionError as exc:
             raise ConfigEntryNotReady(
                 translation_domain=DOMAIN, translation_key="cannot_connect"
             ) from exc
