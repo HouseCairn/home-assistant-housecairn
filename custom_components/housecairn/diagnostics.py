@@ -26,6 +26,7 @@ async def async_get_config_entry_diagnostics(
             "data": async_redact_data(dict(entry.data), TO_REDACT),
         },
         "last_update_success": coordinator.last_update_success,
+        "can_write": coordinator.can_write,
         "update_interval_seconds": (
             coordinator.update_interval.total_seconds() if coordinator.update_interval else None
         ),
@@ -42,5 +43,7 @@ async def async_get_config_entry_diagnostics(
             ),
             "low_stock": len(data.low_stock),
             "low_stock_complete": data.low_stock_complete,
+            "todo": len(data.todo),
+            "todo_complete": data.todo_complete,
         },
     }

@@ -1,0 +1,24 @@
+{
+  "status": 200,
+  "body": {
+    "id": "4a3d1a74-1249-4025-82c4-fbb4fd874ef9",
+    "task": "79e773e0-72b6-4893-b5fd-f87144ff7522",
+    "task_title": "Descale the kettle",
+    "room": "60d30404-5cdb-4cfd-9818-ce18317293a9",
+    "item": null,
+    "status": "done",
+    "due_on": "2026-11-09",
+    "visible_from": null,
+    "postponed_from": null,
+    "completed_on": "2026-11-09",
+    "completed_by": "9e6492de-b0d3-4288-b249-2a1d5eda9cbe",
+    "completed_by_name": "alice",
+    "assignee_name": "",
+    "actual_cost": null,
+    "completion_note": "",
+    "is_overdue": false,
+    "stock": [],
+    "created_at": "2026-11-10T10:59:21.895917Z",
+    "updated_at": "2026-11-10T10:59:23.002371Z"
+  }
+}

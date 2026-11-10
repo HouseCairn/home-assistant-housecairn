@@ -44,6 +44,7 @@ USER_SCHEMA = vol.Schema(
         vol.Required(CONF_VERIFY_SSL, default=True): bool,
     }
 )
+READ_ONLY_SCHEMA = vol.Schema({})
 REAUTH_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_API_TOKEN): TextSelector(
@@ -78,6 +79,8 @@ class HouseCairnConfigFlow(ConfigFlow, domain=DOMAIN):
     def __init__(self) -> None:
         self._input: dict[str, Any] = {}
         self._homes: dict[str, Home] = {}
+        self._home: Home | None = None
+        self._new_token = ""
 
     def _client(self, url: str, token: str, verify_ssl: bool) -> HouseCairnClient:
         session = async_get_clientsession(self.hass, verify_ssl=verify_ssl)
@@ -129,9 +132,18 @@ class HouseCairnConfigFlow(ConfigFlow, domain=DOMAIN):
             home = self._homes[user_input[CONF_HOME_ID]]
             await self.async_set_unique_id(home.id)
             self._abort_if_unique_id_configured()
-            return self.async_create_entry(
-                title=home.name, data={**self._input, CONF_HOME_ID: home.id}
+            self._home = home
+            client = self._client(
+                self._input[CONF_URL], self._input[CONF_API_TOKEN], self._input[CONF_VERIFY_SSL]
             )
+            try:
+                can_write = await client.has_write_scope(home.id)
+            except HouseCairnError as exc:
+                _LOGGER.warning("Could not tell what the token may do: %s", exc)
+                return self.async_abort(reason="probe_failed")
+            if not can_write:
+                return await self.async_step_read_only()
+            return self._create_entry()
         if not available:
             return self.async_abort(reason="already_configured")
         options = [SelectOptionDict(value=home.id, label=home.name) for home in available.values()]
@@ -140,6 +152,25 @@ class HouseCairnConfigFlow(ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema(
                 {vol.Required(CONF_HOME_ID): SelectSelector(SelectSelectorConfig(options=options))}
             ),
+        )
+
+    def _create_entry(self) -> ConfigFlowResult:
+        if self._home is None:
+            return self.async_abort(reason="probe_failed")
+        return self.async_create_entry(
+            title=self._home.name, data={**self._input, CONF_HOME_ID: self._home.id}
+        )
+
+    async def async_step_read_only(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Say that the token cannot mark tasks done; the lists are then read only."""
+        if user_input is not None:
+            return self._create_entry()
+        return self.async_show_form(
+            step_id="read_only",
+            data_schema=READ_ONLY_SCHEMA,
+            description_placeholders={"home": self._home.name if self._home else ""},
         )
 
     async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> ConfigFlowResult:
@@ -163,17 +194,36 @@ class HouseCairnConfigFlow(ConfigFlow, domain=DOMAIN):
                 if home.locked:
                     raise HouseCairnHomeLockedError("locked")
                 # GET /homes/{id}/ needs `read`; so does every call of the integration.
+                can_write = await client.has_write_scope(entry.data[CONF_HOME_ID])
             except HouseCairnError as exc:
                 errors["base"] = _error_key(exc)
                 if errors["base"] == "unknown":
                     _LOGGER.warning("Unexpected answer from Housecairn: %s", exc)
             else:
-                return self.async_update_reload_and_abort(
-                    entry, data_updates={CONF_API_TOKEN: user_input[CONF_API_TOKEN]}
-                )
+                self._new_token = user_input[CONF_API_TOKEN]
+                if not can_write:
+                    return await self.async_step_reauth_read_only()
+                return self._finish_reauth()
         return self.async_show_form(
             step_id="reauth_confirm",
             data_schema=REAUTH_SCHEMA,
             description_placeholders={"home": entry.title},
             errors=errors,
+        )
+
+    def _finish_reauth(self) -> ConfigFlowResult:
+        return self.async_update_reload_and_abort(
+            self._get_reauth_entry(), data_updates={CONF_API_TOKEN: self._new_token}
+        )
+
+    async def async_step_reauth_read_only(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """The new token works but cannot mark tasks done: say so, then save it."""
+        if user_input is not None:
+            return self._finish_reauth()
+        return self.async_show_form(
+            step_id="reauth_read_only",
+            data_schema=READ_ONLY_SCHEMA,
+            description_placeholders={"home": self._get_reauth_entry().title},
         )

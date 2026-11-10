@@ -13,20 +13,21 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from .api import HouseCairnClient
 from .coordinator import HouseCairnConfigEntry, HouseCairnCoordinator
 
-PLATFORMS: list[Platform] = [Platform.SENSOR]
+PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.TODO]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: HouseCairnConfigEntry) -> bool:
-    """Read the home once, then set up its sensors."""
+    """Read the home once, find out what the token may do, then set up the entities."""
     session = async_get_clientsession(hass, verify_ssl=entry.data.get(CONF_VERIFY_SSL, True))
     client = HouseCairnClient(session, entry.data[CONF_URL], entry.data[CONF_API_TOKEN])
     coordinator = HouseCairnCoordinator(hass, entry, client)
     await coordinator.async_config_entry_first_refresh()
+    await coordinator.async_probe_write()
     entry.runtime_data = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: HouseCairnConfigEntry) -> bool:
-    """Unload the sensors of the home."""
+    """Unload the entities of the home."""
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)

@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Connect to Housecairn",
-        "description": "Create an API token in Housecairn with the `read` scope, bound to the home to show. Home Assistant calls Housecairn with this token; Housecairn never receives a Home Assistant token.",
+        "description": "Create an API token in Housecairn (More, Me, API tokens), bound to the home to show. Give it the Read right to see the tasks, and Read and Write to also mark them Done from Home Assistant. Home Assistant calls Housecairn with this token; Housecairn never receives a Home Assistant token.",
         "data": {
           "url": "Address of Housecairn",
           "api_token": "Housecairn API token",
@@ -24,10 +24,18 @@
       },
       "reauth_confirm": {
         "title": "New token for {home}",
-        "description": "Housecairn refused the token: it has expired, was revoked, or is no longer bound to this home. Create a new token with the `read` scope, bound to this home.",
+        "description": "Housecairn refused the token: it has expired, was revoked, or is no longer bound to this home. Create a new token in Housecairn (More, Me, API tokens), bound to this home, with the Read right, and the Write right to mark tasks Done.",
         "data": {
           "api_token": "Housecairn API token"
         }
+      },
+      "read_only": {
+        "title": "Read-only token",
+        "description": "This token can read {home} but cannot change it: the to-do list is shown but tasks cannot be marked Done from Home Assistant. To allow it, create a token with the Read and Write rights in Housecairn (More, Me, API tokens) and set up the integration again. Continue to add the home read-only."
+      },
+      "reauth_read_only": {
+        "title": "Read-only token",
+        "description": "The new token works but cannot change {home}: tasks cannot be marked Done from Home Assistant until a token with the Read and Write rights is saved. Continue to save it anyway."
       }
     },
     "error": {
@@ -35,7 +43,7 @@
       "cannot_connect": "Housecairn could not be reached at this address.",
       "ssl_error": "The TLS certificate of the server was refused.",
       "invalid_auth": "Housecairn refused the token: it is invalid, expired or revoked.",
-      "insufficient_scope": "The token does not have the `read` scope.",
+      "insufficient_scope": "The token does not have the Read right.",
       "no_homes": "The token is not bound to any home.",
       "home_locked": "This home requires signing in through a sign-in provider; an API token cannot open it.",
       "wrong_home": "The token is not bound to this home.",
@@ -43,7 +51,8 @@
     },
     "abort": {
       "already_configured": "This home is already configured.",
-      "reauth_successful": "The new token is saved."
+      "reauth_successful": "The new token is saved.",
+      "probe_failed": "Housecairn could not tell what this token may do. Try again."
     }
   },
   "entity": {
@@ -60,6 +69,11 @@
       "low_stock_items": {
         "name": "Stock items below threshold"
       }
+    },
+    "todo": {
+      "tasks": {
+        "name": "Tasks"
+      }
     }
   },
   "exceptions": {
@@ -74,6 +88,21 @@
     },
     "unexpected_response": {
       "message": "Unexpected answer from Housecairn: {error}"
+    },
+    "occurrence_gone": {
+      "message": "{task} is no longer in the list: it was done, skipped or removed in Housecairn. The list has been refreshed."
+    },
+    "already_closed": {
+      "message": "{task} was already marked done or skipped in Housecairn. The list has been refreshed."
+    },
+    "completion_refused": {
+      "message": "Housecairn refused to mark {task} done. The list has been refreshed."
+    },
+    "write_scope_missing": {
+      "message": "The Housecairn token does not have the Write right: tasks cannot be marked Done. Create a token with the Read and Write rights and set up the integration again."
+    },
+    "only_done": {
+      "message": "Housecairn lists can only mark a task done from Home Assistant; change anything else in Housecairn."
     }
   }
 }
