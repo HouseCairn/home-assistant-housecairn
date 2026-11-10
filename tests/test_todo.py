@@ -288,6 +288,25 @@ async def test_refused_for_another_reason_is_not_called_closed(
 
 
 @pytest.mark.usefixtures("mock_todo_api", "no_token_in_logs")
+async def test_refused_and_unreadable_afterwards_is_not_called_closed(
+    hass: HomeAssistant,
+    setup_entry: Callable[[], Any],
+    aioclient_mock: AiohttpClientMocker,
+    complete: Callable[..., None],
+) -> None:
+    """When the occurrence cannot be read to tell why, the refusal stays unexplained."""
+    aioclient_mock.get(f"{OCCURRENCES}{KETTLE}/", status=500)
+    complete(KETTLE, "complete_closed", done=False)
+    await setup_entry()
+
+    with pytest.raises(ServiceValidationError) as raised:
+        await _done(hass, KETTLE)
+
+    assert raised.value.translation_key == "completion_refused"
+    assert len(await _items(hass)) == 4
+
+
+@pytest.mark.usefixtures("mock_todo_api", "no_token_in_logs")
 async def test_removed_in_housecairn_says_so(
     hass: HomeAssistant, setup_entry: Callable[[], Any], complete: Callable[..., None]
 ) -> None:
