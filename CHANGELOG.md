@@ -3,6 +3,13 @@
 The versions of the integration, the newest first. The plan of each lot is in
 [docs/plan.md](docs/plan.md).
 
+## Unreleased
+
+- **Logo in Home Assistant**: the integration ships its icon and logo (light and
+  dark) in `custom_components/housecairn/brand/`, which Home Assistant 2026.3
+  and later shows without an entry in `home-assistant/brands`. Rendered from the
+  Housecairn artwork by `scripts/brand.py`.
+
 ## 0.1.0
 
 The first version, a test version: it brings lots 1 to 3 of the plan. Needs
