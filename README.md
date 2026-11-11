@@ -90,7 +90,7 @@ In Housecairn an owner can require that a home be opened only by people signed i
 through a given sign-in provider. A token opens such a home only if it was created
 in a session signed in through that provider:
 
-1. In Housecairn, open **More, Me, API tokens, New token**.
+1. In Housecairn, open **More, Me, API tokens, Create a token**.
 2. If you signed in with a password or a passkey, the home is listed but cannot be
    ticked: use **Continue with** and the name of the provider next to it. You sign
    in through the provider and come back to the form.

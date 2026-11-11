@@ -31,7 +31,7 @@
       },
       "reauth_sso": {
         "title": "New token for {home}",
-        "description": "{home} requires signing in through a sign-in provider, and the saved token does not carry it: it was created in a session that was not signed in through that provider, or an owner changed the provider the home requires. In Housecairn, open More, Me, API tokens, New token: next to this home, use Continue with and the name of the provider, then tick the home. Give the new token the Read right, and the Write right to mark tasks Done.",
+        "description": "{home} requires signing in through a sign-in provider, and the saved token does not carry it: it was created in a session that was not signed in through that provider, or an owner changed the provider the home requires. In Housecairn, open More, Me, API tokens, Create a token: next to this home, use Continue with and the name of the provider, then tick the home. Give the new token the Read right, and the Write right to mark tasks Done.",
         "data": {
           "api_token": "Housecairn API token"
         }
@@ -52,7 +52,7 @@
       "invalid_auth": "Housecairn refused the token: it is invalid, expired or revoked.",
       "insufficient_scope": "The token does not have the Read right.",
       "no_homes": "The token is not bound to any home.",
-      "home_locked": "This home requires signing in through a sign-in provider, and the token was not created in a session signed in through it. In Housecairn, use Continue with next to the home on the New token screen, then create the token.",
+      "home_locked": "This home requires signing in through a sign-in provider, and the token was not created in a session signed in through it. In Housecairn, use Continue with next to the home on the New API token screen, then create the token.",
       "wrong_home": "The token is not bound to this home.",
       "unknown": "Unexpected answer from Housecairn."
     },

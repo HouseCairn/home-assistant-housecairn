@@ -31,7 +31,7 @@
       },
       "reauth_sso": {
         "title": "Nouveau jeton pour {home}",
-        "description": "{home} exige une connexion par un fournisseur d'identité, et le jeton enregistré ne la porte pas : il a été créé dans une session qui n'était pas ouverte par ce fournisseur, ou un propriétaire a changé le fournisseur exigé par le logement. Dans Housecairn, ouvrez Plus, Moi, Jetons d'API, Nouveau jeton : à côté de ce logement, utilisez Continuer avec et le nom du fournisseur, puis cochez le logement. Donnez au nouveau jeton le droit Lecture, et le droit Écriture pour marquer les tâches comme faites.",
+        "description": "{home} exige une connexion par un fournisseur d'identité, et le jeton enregistré ne la porte pas : il a été créé dans une session qui n'était pas ouverte par ce fournisseur, ou un propriétaire a changé le fournisseur exigé par le logement. Dans Housecairn, ouvrez Plus, Moi, Jetons d'API, Créer un jeton : à côté de ce logement, utilisez Continuer avec et le nom du fournisseur, puis cochez le logement. Donnez au nouveau jeton le droit Lecture, et le droit Écriture pour marquer les tâches comme faites.",
         "data": {
           "api_token": "Jeton d'API Housecairn"
         }
@@ -52,7 +52,7 @@
       "invalid_auth": "Housecairn a refusé le jeton : il est invalide, expiré ou révoqué.",
       "insufficient_scope": "Le jeton n'a pas le droit Lecture.",
       "no_homes": "Le jeton n'est lié à aucun logement.",
-      "home_locked": "Ce logement exige une connexion par un fournisseur d'identité, et le jeton n'a pas été créé dans une session ouverte par ce fournisseur. Dans Housecairn, sur l'écran Nouveau jeton, utilisez Continuer avec à côté du logement, puis créez le jeton.",
+      "home_locked": "Ce logement exige une connexion par un fournisseur d'identité, et le jeton n'a pas été créé dans une session ouverte par ce fournisseur. Dans Housecairn, sur l'écran Nouveau jeton d'API, utilisez Continuer avec à côté du logement, puis créez le jeton.",
       "wrong_home": "Le jeton n'est pas lié à ce logement.",
       "unknown": "Réponse inattendue de Housecairn."
     },
