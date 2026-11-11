@@ -62,10 +62,7 @@ token bound to several homes and a home that requires a sign-in provider:
 ## Requirements
 
 - Home Assistant 2026.10 or later.
-- A Housecairn instance reachable from Home Assistant, recent enough to have the
-  **API tokens** screen, the filter of the tasks without a date and the tokens
-  of a home that requires a sign-in provider (the current `main`; no release
-  has them yet).
+- A Housecairn instance reachable from Home Assistant, version 0.1.0 or later.
 - With the [Housecairn app](https://github.com/HouseCairn/home-assistant-addons)
   for Home Assistant: an address that reaches it without Home Assistant's
   interface, such as its port; ingress addresses only work in a browser.
@@ -93,10 +90,10 @@ token bound to several homes and a home that requires a sign-in provider:
 
 ## Project status
 
-**Early development, no version released yet.** The integration is at 0.3.0 in
-its manifest (sensors, the to-do list with "Done" and "Undo", tasks without a
-date, the `housecairn.report` action), without a tagged release; Housecairn has no release yet either, and its first version, v0.1.0,
-is planned. Install from the default branch, and expect changes.
+**Early development.** 0.1.0 is the first version, a test version: sensors, the
+to-do list with "Done" and "Undo", tasks without a date, the `housecairn.report`
+action. It needs Housecairn 0.1.0 or later. Expect changes from one 0.x version
+to the next; the [changelog](CHANGELOG.md) says what changed.
 
 ## Privacy and security
 

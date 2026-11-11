@@ -10,7 +10,7 @@ The rule does not change from one lot to the next: Home Assistant calls
 Housecairn with a Housecairn token; Housecairn never holds a Home Assistant
 token.
 
-## Lot 1: setup and sensors (0.1.0)
+## Lot 1: setup and sensors (in 0.1.0)
 
 Config flow (address, token, TLS verified by default, one entry per home,
 reauthentication), a coordinator, four sensors per home, diagnostics, English
@@ -45,7 +45,7 @@ Missing in the API, by endpoint:
   A token created in a session signed in through the provider opens the home
   while it requires that provider or none; lot 3 uses it.
 
-## Lot 2: to-do list with "Done" (0.2.0)
+## Lot 2: to-do list with "Done" (in 0.1.0)
 
 One `todo` entity per home: the open occurrences that are overdue, due today or
 due in the next 14 days, with their date and their room as the description.
@@ -108,7 +108,7 @@ Missing in the API, by endpoint:
 - `GET /homes/{home_id}/occurrences/`: an `updated_after` filter, so an update
   reads what changed instead of the whole lists.
 
-## Lot 3: tasks without a date, tasks done lately, report action (0.3.0, this version)
+## Lot 3: tasks without a date, tasks done lately, report action (in 0.1.0)
 
 Decisions of the maintainer (2026-11-10). The list keeps its 14 days; a read-only
 token is still accepted, with the information step.

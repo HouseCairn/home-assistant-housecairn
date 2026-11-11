@@ -29,11 +29,11 @@ token** that you create in Housecairn and paste into the setup dialog.
 ## Requirements
 
 - Home Assistant 2026.10 or later.
-- A Housecairn instance reachable from Home Assistant, new enough to have the
-  **API tokens** screen, the filter of the tasks without a date and the tokens
-  of a home that requires a sign-in provider (the current `main`; no tagged
-  release has them yet), and a token with the Read right (and Write to mark
-  tasks done and report problems) bound to the home to show.
+- A Housecairn instance reachable from Home Assistant, version 0.1.0 or later
+  (it has the **API tokens** screen, the filter of the tasks without a date and
+  the tokens of a home that requires a sign-in provider), and a token with the
+  Read right (and Write to mark tasks done and report problems) bound to the
+  home to show.
 - A home that requires signing in through a sign-in provider (single sign-on)
   can be added with a token created while signed in through that provider: see
   [A home that requires a sign-in provider](#a-home-that-requires-a-sign-in-provider).
