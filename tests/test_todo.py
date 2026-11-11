@@ -168,6 +168,65 @@ async def test_a_room_that_appeared_is_read_at_the_next_update(
     ] == "Kitchen"
 
 
+def _done_page(*rows: dict[str, Any]) -> dict[str, Any]:
+    return {"next": None, "previous": None, "results": list(rows)}
+
+
+@pytest.mark.usefixtures("mock_todo_api")
+async def test_a_row_in_both_lists_is_listed_once(
+    hass: HomeAssistant, setup_entry: Callable[[], Any], aioclient_mock: AiohttpClientMocker
+) -> None:
+    """A list read a moment after another may hold a row that just changed: shown once."""
+    overdue = load("todo_overdue")["body"]["results"][0]
+    just_done = {**overdue, "status": "done", "completed_on": DAY}
+    done = load("todo_done")["body"]
+    aioclient_mock.clear_requests()
+    aioclient_mock.get(OCCURRENCES, params=DONE_SINCE, json=_done_page(just_done, *done["results"]))
+    aioclient_mock.get(f"{API}/homes/{HOME_ID}/rooms/", json=load("rooms")["body"])
+    await _relist(aioclient_mock)
+
+    await setup_entry()
+
+    uids = [i["uid"] for i in await _items(hass)]
+    assert uids == [*OPEN, SOFTENER, OVEN]
+    assert uids.count(overdue["id"]) == 1
+
+
+@pytest.mark.usefixtures("mock_todo_api")
+async def test_a_room_known_only_by_a_done_task_is_read(
+    hass: HomeAssistant,
+    setup_entry: Callable[[], Any],
+    aioclient_mock: AiohttpClientMocker,
+    freezer: Any,
+) -> None:
+    """Every open task is in a known room; the one task done lately is in a new room."""
+    rooms = load("rooms")["body"]
+    hallway = next(r for r in rooms["results"] if r["name"] == "Hallway")
+    without_hallway = {**rooms, "results": [r for r in rooms["results"] if r is not hallway]}
+    aioclient_mock.clear_requests()
+    aioclient_mock.get(f"{API}/homes/{HOME_ID}/rooms/", json=without_hallway)
+    await _relist(aioclient_mock)
+    await setup_entry()
+    assert _room_reads(aioclient_mock) == 1
+
+    done = load("todo_done")["body"]
+    in_hallway = [
+        {**row, "room": hallway["id"]} if row["id"] == OVEN else row for row in done["results"]
+    ]
+    aioclient_mock.clear_requests()
+    aioclient_mock.get(OCCURRENCES, params=DONE_SINCE, json=_done_page(*in_hallway))
+    aioclient_mock.get(f"{API}/homes/{HOME_ID}/rooms/", json=rooms)
+    await _relist(aioclient_mock)
+    freezer.tick(UPDATE_INTERVAL + timedelta(seconds=1))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+
+    assert _room_reads(aioclient_mock) == 1
+    assert {i["summary"]: i.get("description") for i in await _items(hass)}[
+        "Clean the oven"
+    ] == "Hallway"
+
+
 async def _relist(aioclient_mock: AiohttpClientMocker) -> None:
     """The lists and the probe of mock_todo_api, plain."""
     for params, name in (
