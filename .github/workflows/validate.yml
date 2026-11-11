@@ -24,8 +24,6 @@ jobs:
           category: integration
           # No PR comment: it would need `pull-requests: write`.
           comment: "false"
-          # Brand images are not published yet (see docs/plan.md).
-          ignore: brands
 
   hassfest:
     name: Hassfest

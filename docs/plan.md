@@ -203,8 +203,6 @@ Missing in the API, by endpoint:
 
 ## Before an announcement
 
-- Brand images (icon and logo) for Home Assistant and HACS; the `brands` check of
-  the HACS action is skipped until then.
 - Releases with a version tag, so HACS installs a version and not the default
   branch.
 - A CI run on the beta of each monthly Home Assistant release.
