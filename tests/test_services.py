@@ -27,6 +27,8 @@ REPORTS = f"{API}/homes/{HOME_ID}/reports/"
 DETECTOR = "4f51cf6f-8837-452c-b04e-3f81344cd9df"
 HALLWAY = "978c6a38-de2c-4c8e-8eff-ee38d0536a82"
 REPORTED = "Smoke detector battery low"
+# An article of the home (any identifier would do: it is only sent as the place).
+SPARE_BATTERY = "2a9c0edf-e533-4d21-b185-0913b8654f08"
 
 
 def _reports(aioclient_mock: AiohttpClientMocker, open_name: str, task_name: str) -> None:
@@ -96,6 +98,24 @@ async def test_the_same_report_still_open_is_not_made_twice(
 
 
 @pytest.mark.usefixtures("mock_api", "no_token_in_logs")
+async def test_white_space_inside_the_title_does_not_make_another_report(
+    hass: HomeAssistant, setup_entry: Callable[[], Any], aioclient_mock: AiohttpClientMocker
+) -> None:
+    """Housecairn folds runs of white space: the title sent must equal the one it returns."""
+    _reports(aioclient_mock, "reports_open_after", "reports_task_none")
+    _created(aioclient_mock)
+    entry = await setup_entry()
+
+    response = await _report(
+        hass, entry.entry_id, title="Smoke  detector \t battery   low", item=DETECTOR
+    )
+
+    existing = load("reports_open_after")["body"]["results"][0]
+    assert response == {"report_id": existing["id"], "created": False, "status": "open"}
+    assert _post_bodies(aioclient_mock) == []
+
+
+@pytest.mark.usefixtures("mock_api", "no_token_in_logs")
 async def test_a_report_made_into_a_task_is_not_made_again(
     hass: HomeAssistant, setup_entry: Callable[[], Any], aioclient_mock: AiohttpClientMocker
 ) -> None:
@@ -122,6 +142,8 @@ async def test_a_report_made_into_a_task_is_not_made_again(
         {"title": "Front door lock is stiff", "room": HALLWAY},
         # Another title at the same place too.
         {"title": "Smoke detector beeps", "item": DETECTOR},
+        # Only the article differs from a report without a place.
+        {"title": "Front door lock is stiff", "article": SPARE_BATTERY},
     ],
 )
 async def test_another_title_or_place_is_another_report(
