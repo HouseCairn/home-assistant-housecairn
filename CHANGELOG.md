@@ -3,7 +3,11 @@
 The versions of the integration, the newest first. The plan of each lot is in
 [docs/plan.md](docs/plan.md).
 
-## Unreleased
+## 0.2.0
+
+A feature version: report a problem from the entity that saw it, with the room
+found by its area and the item by its device, and two blueprints to start from.
+Needs Housecairn 0.1.0 or later.
 
 - **`housecairn.report` finds the place from the entity** that saw the problem
   (`entity_id`): the room of the home with the name of the area of the entity
