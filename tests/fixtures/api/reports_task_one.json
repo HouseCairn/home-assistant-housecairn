@@ -1,0 +1,25 @@
+{
+  "status": 200,
+  "body": {
+    "next": null,
+    "previous": null,
+    "results": [
+      {
+        "id": "699aa4c9-fa38-4086-acdf-94ab0281f95e",
+        "title": "Front door lock is stiff",
+        "status": "task",
+        "place": "",
+        "room": null,
+        "item": null,
+        "article": null,
+        "task": "734f5185-efb6-4693-9505-e7a40b3f1278",
+        "reporter_name": "alice",
+        "mine": true,
+        "photo_url": null,
+        "thumbnail_url": null,
+        "created_at": "2026-11-11T01:30:34.947620Z",
+        "closed_at": null
+      }
+    ]
+  }
+}

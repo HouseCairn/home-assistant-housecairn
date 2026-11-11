@@ -32,6 +32,7 @@ from .api import (
     normalize_url,
 )
 from .const import CONF_HOME_ID, DOMAIN
+from .coordinator import HouseCairnCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -174,13 +175,32 @@ class HouseCairnConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
     async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> ConfigFlowResult:
-        """The token was refused: expired, revoked, or no longer bound to the home."""
+        """The token was refused: expired, revoked, no longer bound to the home, or
+        without the sign-in provider the home now requires.
+
+        The coordinator of the entry noted the last case (a 403 `sso_required`), so that
+        the dialog says why a new token is needed.
+        """
+        coordinator = getattr(self._get_reauth_entry(), "runtime_data", None)
+        if isinstance(coordinator, HouseCairnCoordinator) and coordinator.provider_missing:
+            return await self.async_step_reauth_sso()
         return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_sso(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """The home requires a sign-in provider that the saved token does not carry."""
+        return await self._reauth_form("reauth_sso", user_input)
 
     async def async_step_reauth_confirm(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Ask for a new token, and check it opens the same home."""
+        return await self._reauth_form("reauth_confirm", user_input)
+
+    async def _reauth_form(
+        self, step_id: str, user_input: dict[str, Any] | None
+    ) -> ConfigFlowResult:
         entry = self._get_reauth_entry()
         errors: dict[str, str] = {}
         if user_input is not None:
@@ -205,7 +225,7 @@ class HouseCairnConfigFlow(ConfigFlow, domain=DOMAIN):
                     return await self.async_step_reauth_read_only()
                 return self._finish_reauth()
         return self.async_show_form(
-            step_id="reauth_confirm",
+            step_id=step_id,
             data_schema=REAUTH_SCHEMA,
             description_placeholders={"home": entry.title},
             errors=errors,

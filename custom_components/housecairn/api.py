@@ -1,8 +1,9 @@
 """A small asynchronous client of the Housecairn API v1.
 
 Written against the OpenAPI schema of Housecairn (a copy is in
-tests/fixtures/openapi.yaml). It reads with the `read` scope, and closes an
-occurrence ("Done") with the `write` scope; the token is bound to the home it shows.
+tests/fixtures/openapi.yaml). It reads with the `read` scope; it closes an occurrence
+("Done"), takes a "Done" back and reports a problem with the `write` scope. The token
+is bound to the home it shows.
 
 The token is sent in the `Authorization` header and nowhere else: it is never
 part of an address, a log line or an exception message.
@@ -30,6 +31,11 @@ PAGE_SIZE: Final = 200
 MAX_PAGES: Final = 10
 # The statuses of an occurrence that is over (schema `OccurrenceStatusEnum`).
 CLOSED_STATUSES: Final = frozenset({"done", "skipped"})
+# The status given to the open occurrence of a task row, which does not carry one.
+OPEN_STATUS: Final = "planned"
+# The statuses of a report that is not closed (schema `ReportStatusEnum`): still open, or
+# made into a task. Resolved and closed without action are the closed ones.
+REPORT_WAITING_STATUSES: Final = ("open", "task")
 # An occurrence that cannot exist: the probe of the `write` scope (see has_write_scope).
 NO_OCCURRENCE: Final = "00000000-0000-0000-0000-000000000000"
 
@@ -55,7 +61,12 @@ class HouseCairnScopeError(HouseCairnError):
 
 
 class HouseCairnHomeLockedError(HouseCairnError):
-    """403 `sso_required`: the home requires a sign-in provider; a token never opens it."""
+    """403 `sso_required`: the home requires a sign-in provider this token does not carry.
+
+    A token opens such a home only when it was created in a session signed in through
+    that provider, and only while the home requires that provider (Housecairn ADR 0057).
+    A token created otherwise, or a home whose provider changed since, needs a new token.
+    """
 
 
 class HouseCairnNotFoundError(HouseCairnError):
@@ -65,8 +76,8 @@ class HouseCairnNotFoundError(HouseCairnError):
 class HouseCairnRejectedError(HouseCairnError):
     """400: Housecairn refused the change (for example an occurrence already closed).
 
-    The answer carries a message, not a stable code: `detail` is that message, for the
-    logs and never for a decision.
+    The answer carries a message, not a stable code: `detail` is that message (with the
+    name of the field when it is about one), to show or log and never for a decision.
     """
 
     def __init__(self, detail: str) -> None:
@@ -103,12 +114,14 @@ class Occurrence:
     status: str
     room: str | None
     visible_from: datetime.date | None
+    completed_on: datetime.date | None = None
 
     @classmethod
     def from_api(cls, data: dict[str, Any]) -> Occurrence:
         due = data["due_on"]
         visible = data["visible_from"]
         room = data["room"]
+        completed = data.get("completed_on")
         return cls(
             id=str(data["id"]),
             task=str(data["task"]),
@@ -118,6 +131,29 @@ class Occurrence:
             status=str(data["status"]),
             room=str(room) if room else None,
             visible_from=datetime.date.fromisoformat(visible) if visible else None,
+            completed_on=datetime.date.fromisoformat(completed) if completed else None,
+        )
+
+    @classmethod
+    def from_task(cls, data: dict[str, Any]) -> Occurrence | None:
+        """The open occurrence of a task row (schema `Task`), or None when it has none.
+
+        A row of `GET /tasks/?due=none` is a task whose open occurrence has no date: the
+        row carries the id of that occurrence, which "Done" needs, but not its status.
+        """
+        occurrence = data.get("open_occurrence")
+        if not occurrence:
+            return None
+        room = data.get("room")
+        return cls(
+            id=str(occurrence),
+            task=str(data["id"]),
+            task_title=str(data["title"]),
+            due_on=None,
+            is_overdue=False,
+            status=OPEN_STATUS,
+            room=str(room) if room else None,
+            visible_from=None,
         )
 
     @property
@@ -136,6 +172,33 @@ class Room:
     @classmethod
     def from_api(cls, data: dict[str, Any]) -> Room:
         return cls(id=str(data["id"]), name=str(data["name"]))
+
+
+@dataclass(frozen=True, slots=True)
+class Report:
+    """A reported problem (schema `Report`), reduced to what tells two reports apart."""
+
+    id: str
+    title: str
+    status: str
+    room: str | None
+    item: str | None
+    article: str | None
+
+    @classmethod
+    def from_api(cls, data: dict[str, Any]) -> Report:
+        def ref(name: str) -> str | None:
+            value = data.get(name)
+            return str(value) if value else None
+
+        return cls(
+            id=str(data["id"]),
+            title=str(data["title"]),
+            status=str(data["status"]),
+            room=ref("room"),
+            item=ref("item"),
+            article=ref("article"),
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -231,6 +294,26 @@ class HouseCairnClient:
         )
         return Rows([Occurrence.from_api(row) for row in rows.items], rows.complete)
 
+    async def undated(self, home_id: str) -> Rows[Occurrence]:
+        """The open occurrences without a date, one per task (`GET /tasks/?due=none`).
+
+        The occurrence list cannot filter them (they sort last, after every dated row);
+        the task list can, and each of its rows names its open occurrence.
+        """
+        rows = await self._list(f"/homes/{home_id}/tasks/", {"due": "none"})
+        found = (Occurrence.from_task(row) for row in rows.items)
+        return Rows([row for row in found if row is not None], rows.complete)
+
+    async def done_since(self, home_id: str, day: datetime.date) -> Rows[Occurrence]:
+        """Occurrences marked done on `day` or after, the latest first.
+
+        `GET /occurrences/?status=done&closed_after=<day>&ordering=recent`; skipped ones
+        are left out, they were not done.
+        """
+        params = {"status": "done", "closed_after": day.isoformat(), "ordering": "recent"}
+        rows = await self._list(f"/homes/{home_id}/occurrences/", params)
+        return Rows([Occurrence.from_api(row) for row in rows.items], rows.complete)
+
     async def occurrence(self, home_id: str, occurrence_id: str) -> Occurrence:
         """One occurrence (`GET /occurrences/{occurrence_id}/`)."""
         data = await self._request("GET", f"/homes/{home_id}/occurrences/{occurrence_id}/")
@@ -246,6 +329,47 @@ class HouseCairnClient:
         await self._request(
             "POST", f"/homes/{home_id}/occurrences/{occurrence_id}/complete/", json={}
         )
+
+    async def undo(self, home_id: str, occurrence_id: str) -> None:
+        """Take a "Done" back (`POST /occurrences/{occurrence_id}/undo/`).
+
+        Needs the `write` scope. The occurrence is open again and the next one of a
+        repeating task is removed. Housecairn refuses it (400, a message and no code)
+        when the occurrence is not closed any more, or when the next occurrence has been
+        changed since.
+        """
+        await self._request("POST", f"/homes/{home_id}/occurrences/{occurrence_id}/undo/", json={})
+
+    async def waiting_reports(self, home_id: str) -> list[Report]:
+        """The reports of the caller that are not closed (`GET /reports/?mine=true`).
+
+        One list per status of `REPORT_WAITING_STATUSES`: the endpoint filters on one
+        status at a time. Housecairn lets a person have at most twenty of them.
+        """
+        found: list[Report] = []
+        for status in REPORT_WAITING_STATUSES:
+            rows = await self._list(
+                f"/homes/{home_id}/reports/", {"status": status, "mine": "true"}
+            )
+            found.extend(Report.from_api(row) for row in rows.items)
+        return found
+
+    async def create_report(
+        self,
+        home_id: str,
+        title: str,
+        *,
+        room: str | None = None,
+        item: str | None = None,
+        article: str | None = None,
+    ) -> Report:
+        """Report a problem (`POST /reports/`), with one place at most. Needs `write`."""
+        body: dict[str, Any] = {"title": title}
+        for name, value in (("room", room), ("item", item), ("article", article)):
+            if value is not None:
+                body[name] = value
+        data = await self._request("POST", f"/homes/{home_id}/reports/", json=body)
+        return Report.from_api(data)
 
     async def has_write_scope(self, home_id: str) -> bool:
         """Whether the token has the `write` scope, without changing anything.
@@ -365,7 +489,7 @@ class HouseCairnClient:
             raise HouseCairnNotFoundError(path)
         if status == 400:
             raise HouseCairnRejectedError(_detail_of(body))
-        if status != 200:
+        if status not in (200, 201):
             raise HouseCairnResponseError(f"HTTP {status}")
         if not isinstance(body, dict):
             raise HouseCairnResponseError("not a JSON object")
@@ -373,14 +497,16 @@ class HouseCairnClient:
 
 
 def _detail_of(body: Any) -> str:
-    """The message of a 400 (`{"detail": ["..."]}`), for the logs only."""
-    if isinstance(body, dict):
-        detail = body.get("detail")
-        if isinstance(detail, list):
-            return " ".join(str(part) for part in detail)
-        if detail:
-            return str(detail)
-    return ""
+    """The message of a 400: `{"detail": ["..."]}`, or `{"<field>": ["..."]}` per field."""
+    if not isinstance(body, dict):
+        return ""
+    parts: list[str] = []
+    for name, value in body.items():
+        messages = value if isinstance(value, list) else [value]
+        text = " ".join(str(part) for part in messages if part)
+        if text:
+            parts.append(text if name == "detail" else f"{name}: {text}")
+    return " ".join(parts)
 
 
 def _cursor_of(link: Any) -> str | None:

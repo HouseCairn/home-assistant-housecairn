@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Se connecter à Housecairn",
-        "description": "Créez un jeton d'API dans Housecairn (Plus, Moi, Jetons d'API), lié au logement à afficher. Donnez-lui le droit Lecture pour voir les tâches, et Lecture et Écriture pour aussi les marquer comme faites depuis Home Assistant. Home Assistant appelle Housecairn avec ce jeton ; Housecairn ne reçoit jamais de jeton Home Assistant.",
+        "description": "Créez un jeton d'API dans Housecairn (Plus, Moi, Jetons d'API), lié au logement à afficher. Donnez-lui le droit Lecture pour voir les tâches, et Lecture et Écriture pour aussi les marquer comme faites et signaler des problèmes depuis Home Assistant. Home Assistant appelle Housecairn avec ce jeton ; Housecairn ne reçoit jamais de jeton Home Assistant.",
         "data": {
           "url": "Adresse de Housecairn",
           "api_token": "Jeton d'API Housecairn",
@@ -29,9 +29,16 @@
           "api_token": "Jeton d'API Housecairn"
         }
       },
+      "reauth_sso": {
+        "title": "Nouveau jeton pour {home}",
+        "description": "{home} exige une connexion par un fournisseur d'identité, et le jeton enregistré ne la porte pas : il a été créé dans une session qui n'était pas ouverte par ce fournisseur, ou un propriétaire a changé le fournisseur exigé par le logement. Dans Housecairn, ouvrez Plus, Moi, Jetons d'API, Nouveau jeton : à côté de ce logement, utilisez Continuer avec et le nom du fournisseur, puis cochez le logement. Donnez au nouveau jeton le droit Lecture, et le droit Écriture pour marquer les tâches comme faites.",
+        "data": {
+          "api_token": "Jeton d'API Housecairn"
+        }
+      },
       "read_only": {
         "title": "Jeton en lecture seule",
-        "description": "Ce jeton peut lire {home} mais pas le modifier : la liste de tâches s'affiche, mais les tâches ne peuvent pas être marquées comme faites depuis Home Assistant. Pour l'autoriser, créez dans Housecairn (Plus, Moi, Jetons d'API) un jeton avec les droits Lecture et Écriture, puis configurez de nouveau l'intégration. Continuez pour ajouter le logement en lecture seule."
+        "description": "Ce jeton peut lire {home} mais pas le modifier : la liste de tâches s'affiche, mais les tâches ne peuvent pas être marquées comme faites depuis Home Assistant, et l'action Signaler est refusée. Pour l'autoriser, créez dans Housecairn (Plus, Moi, Jetons d'API) un jeton avec les droits Lecture et Écriture, puis configurez de nouveau l'intégration. Continuez pour ajouter le logement en lecture seule."
       },
       "reauth_read_only": {
         "title": "Jeton en lecture seule",
@@ -45,7 +52,7 @@
       "invalid_auth": "Housecairn a refusé le jeton : il est invalide, expiré ou révoqué.",
       "insufficient_scope": "Le jeton n'a pas le droit Lecture.",
       "no_homes": "Le jeton n'est lié à aucun logement.",
-      "home_locked": "Ce logement exige une connexion par un fournisseur d'identité ; un jeton d'API ne peut pas l'ouvrir.",
+      "home_locked": "Ce logement exige une connexion par un fournisseur d'identité, et le jeton n'a pas été créé dans une session ouverte par ce fournisseur. Dans Housecairn, sur l'écran Nouveau jeton, utilisez Continuer avec à côté du logement, puis créez le jeton.",
       "wrong_home": "Le jeton n'est pas lié à ce logement.",
       "unknown": "Réponse inattendue de Housecairn."
     },
@@ -81,7 +88,7 @@
       "message": "Housecairn a refusé le jeton."
     },
     "home_locked": {
-      "message": "Ce logement exige une connexion par un fournisseur d'identité ; un jeton d'API ne peut pas l'ouvrir."
+      "message": "Ce logement exige une connexion par un fournisseur d'identité que le jeton ne porte pas."
     },
     "cannot_connect": {
       "message": "Housecairn est injoignable."
@@ -102,7 +109,50 @@
       "message": "Le jeton Housecairn n'a pas le droit Écriture : les tâches ne peuvent pas être marquées comme faites. Créez un jeton avec les droits Lecture et Écriture et configurez de nouveau l'intégration."
     },
     "only_done": {
-      "message": "Depuis Home Assistant, une liste Housecairn permet seulement de marquer une tâche comme faite ; modifiez le reste dans Housecairn."
+      "message": "Depuis Home Assistant, une liste Housecairn permet seulement de marquer une tâche comme faite, ou d'annuler ce « Fait » ; modifiez le reste dans Housecairn."
+    },
+    "sso_required": {
+      "message": "Ce logement exige une connexion par un fournisseur d'identité que le jeton ne porte pas (il a été créé hors d'une session de ce fournisseur, ou le fournisseur a changé). Home Assistant demande un nouveau jeton."
+    },
+    "already_reopened": {
+      "message": "{task} n'est plus marquée comme faite dans Housecairn. La liste a été actualisée."
+    },
+    "undo_refused": {
+      "message": "Housecairn a refusé d'annuler le « Fait » de {task} : la prochaine échéance de cette tâche a été modifiée depuis. Modifiez-la dans Housecairn. La liste a été actualisée."
+    },
+    "report_needs_write": {
+      "message": "Le jeton Housecairn de {home} n'a pas le droit Écriture : il ne peut pas signaler de problème. Créez un jeton avec les droits Lecture et Écriture et saisissez-le dans l'intégration."
+    },
+    "report_refused": {
+      "message": "Housecairn a refusé le signalement : {error}"
+    }
+  },
+  "services": {
+    "report": {
+      "name": "Signaler un problème",
+      "description": "Signale un problème dans un logement Housecairn, au nom de la personne qui possède le jeton. Rien n'est créé quand un signalement de cette personne, avec le même titre et le même endroit, n'est pas encore clos. Exige un jeton avec le droit Écriture.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Logement",
+          "description": "Le logement Housecairn où signaler le problème."
+        },
+        "title": {
+          "name": "Titre",
+          "description": "Ce qui ne va pas, en 200 caractères au plus."
+        },
+        "room": {
+          "name": "Pièce",
+          "description": "Identifiant d'une pièce du logement, pour dire où. Au plus un parmi pièce, élément et article."
+        },
+        "item": {
+          "name": "Élément",
+          "description": "Identifiant d'un élément du logement, pour dire où."
+        },
+        "article": {
+          "name": "Article",
+          "description": "Identifiant d'un article du stock du logement, pour dire lequel."
+        }
+      }
     }
   }
 }
