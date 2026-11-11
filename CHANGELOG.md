@@ -3,7 +3,11 @@
 The versions of the integration, the newest first. The plan of each lot is in
 [docs/plan.md](docs/plan.md).
 
-## Unreleased
+## 0.1.1
+
+A fix version: the integration logo shows in Home Assistant 2026.3 and later, once
+HACS has updated the integration and Home Assistant has restarted. Needs
+Housecairn 0.1.0 or later.
 
 - **Logo in Home Assistant**: the integration ships its icon and logo (light and
   dark) in `custom_components/housecairn/brand/`, which Home Assistant 2026.3
