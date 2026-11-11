@@ -25,3 +25,17 @@ report:
       example: "3f2b0c7e-1d2a-4c5b-9e8f-0a1b2c3d4e5f"
       selector:
         text:
+    entity_id:
+      required: false
+      example: "binary_sensor.boiler_problem"
+      selector:
+        entity:
+    area_id:
+      required: false
+      selector:
+        area:
+    create_item:
+      required: false
+      default: false
+      selector:
+        boolean:

@@ -29,13 +29,19 @@ documentation is at <https://docs.housecairn.app>.
   seven days takes the "Done" back.
 - **An action to report a problem**: `housecairn.report` creates a report in
   Housecairn from an automation, without ever making a duplicate (example in
-  the [guide](docs/guide.md#action-report-a-problem)).
+  the [guide](docs/guide.md#action-report-a-problem)). Given the entity that saw
+  the problem, it finds the room by the area of the entity and the item by its
+  device, and can add the device to the room when it is missing
+  ([how](docs/guide.md#where-the-report-goes)).
+- **Two blueprints**: report when an entity stays in a state (a leak, a boiler
+  fault) or when a value stays below a threshold (a battery), with an import
+  button ([blueprints](docs/guide.md#blueprints)).
 - **A Housecairn API token, never a Home Assistant token**: limited to the homes
   and rights you choose in Housecairn, revocable there at any time.
 - **Reauthentication** when the token expires or is revoked: Home Assistant asks
   for a new one.
 - **Diagnostics** without the token, the address, or the names of the home,
-  rooms, tasks and stock items.
+  rooms, items, tasks and stock items.
 - English and French.
 
 ## Install
@@ -81,6 +87,10 @@ token bound to several homes and a home that requires a sign-in provider:
 - **A repeating task done lately is listed twice** under the same title (open
   and checked): an automation must use the `uid` of the item.
 - **Housecairn counts at most twenty waiting reports** per person and per home.
+- **The room is found by name**: the area in Home Assistant and the room in
+  Housecairn must have the same name (case, accents and spaces aside). No room
+  is ever created; no match, or several, gives a report without a place. Adding
+  a device as an item needs a person who may change the home (not a viewer).
 - **Polling every five minutes** (five requests); the list is read again right
   after a task is marked done or taken back.
 - **"Today" is the date in Home Assistant's time zone**, while Housecairn decides

@@ -1,0 +1,84 @@
+blueprint:
+  name: Report a problem in Housecairn when a sensor stays in a state
+  description: >-
+    When one of the chosen entities stays in a state for a while (a leak
+    detected, a `problem` sensor on, a boiler fault), report the problem in
+    Housecairn. The report goes to the room with the name of the area of the
+    entity (or of its device), and to the item of that room with the name of the
+    device; the device is added to the room when it has no item by that name.
+    Nothing is created twice while the report is not closed.
+    Needs the Housecairn integration with a token that has the Write right.
+  domain: automation
+  author: Housecairn
+  source_url: https://github.com/HouseCairn/home-assistant-housecairn/blob/main/blueprints/automation/housecairn/report_on_state.yaml
+  homeassistant:
+    min_version: "2026.10.0"
+  input:
+    home:
+      name: Home
+      description: The Housecairn home to report the problem in.
+      selector:
+        config_entry:
+          integration: housecairn
+    entities:
+      name: Entities
+      description: The sensors that say there is a problem.
+      selector:
+        entity:
+          multiple: true
+    state:
+      name: State
+      description: The state that means a problem (`on` for a leak or a `problem` sensor).
+      default: "on"
+      selector:
+        text:
+    duration:
+      name: For
+      description: How long the entity must stay in that state before the report.
+      default:
+        hours: 0
+        minutes: 5
+        seconds: 0
+      selector:
+        duration:
+    title:
+      name: Title
+      description: >-
+        What is wrong, 200 characters at most. A template: `trigger.to_state.name`
+        is the name of the entity.
+      default: "Problem detected: {{ trigger.to_state.name }}"
+      selector:
+        text:
+    area:
+      name: Area
+      description: >-
+        Optional. An area whose room of the same name is used instead of the area
+        of the entity.
+      default: ""
+      selector:
+        area:
+    create_item:
+      name: Add the device if missing
+      description: >-
+        Add the device of the entity to the room as a piece of equipment when the
+        room has no item with its name.
+      default: true
+      selector:
+        boolean:
+
+mode: queued
+
+triggers:
+  - trigger: state
+    entity_id: !input entities
+    to: !input state
+    for: !input duration
+
+actions:
+  - action: housecairn.report
+    data:
+      config_entry_id: !input home
+      title: !input title
+      entity_id: "{{ trigger.entity_id }}"
+      area_id: !input area
+      create_item: !input create_item

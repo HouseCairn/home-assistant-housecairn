@@ -150,6 +150,39 @@ Missing in the API, by endpoint:
   Home Assistant instances with the same token could still race.
 - `GET /me/token/` (lot 1): still the way to know the scopes without the probe.
 
+## Lot 3b: the place of a report from the entity, and blueprints
+
+Request of the maintainer (2026-11-11): a problem seen on the boiler, in the
+area Kitchen, goes to the room Kitchen, on the boiler, which is added when it is
+missing; nothing to enter or choose in the common case.
+
+- `housecairn.report` takes `entity_id`, `area_id` and `create_item` (false by
+  default; true in the blueprints). The room is the area of the entity, or of its
+  device, matched by name to a room (case, accents and spaces aside); none is
+  ever created. The item is the item linked to the device (kept in a `Store` per
+  config entry), else the item of the room with the name of the device, else, with
+  `create_item`, a new piece of equipment. Ambiguous names choose nothing.
+- No device per Housecairn item in Home Assistant: it would double the real
+  devices. No area, device or entity is changed.
+- Two blueprints, `report_on_state.yaml` and `report_below_threshold.yaml`.
+
+Uses, only when the action runs:
+
+- `GET /homes/{home_id}/rooms/` (kept one minute);
+- `GET /homes/{home_id}/items/{item_id}/` for a linked item (a 404 forgets the
+  link) and `GET /homes/{home_id}/items/?room=<room_id>`;
+- `POST /homes/{home_id}/items/` (`room`, `name`, `kind: equipment`, `brand`,
+  `model`), `write` scope and a role that may change the home.
+
+Missing in the API, by endpoint:
+
+- `GET /homes/{home_id}/items/`: a filter on the exact name, compared as
+  Housecairn compares it; `q` is a case-insensitive "contains", sensitive to
+  accents, so the integration reads the items of the room and compares itself.
+- `POST /homes/{home_id}/items/`: an external reference (the device of Home
+  Assistant) kept by Housecairn, which would make the link survive a reinstall of
+  Home Assistant and avoid a duplicate when two instances add the same device.
+
 ## Lot 4: calendar
 
 One `calendar` entity per home: each occurrence is an all-day event on its due

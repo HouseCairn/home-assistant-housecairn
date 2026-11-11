@@ -27,6 +27,8 @@ async def async_get_config_entry_diagnostics(
         },
         "last_update_success": coordinator.last_update_success,
         "can_write": coordinator.can_write,
+        # How many devices are linked to an item: a count, never a name or an identifier.
+        "item_links": len(await coordinator.places.links()),
         "update_interval_seconds": (
             coordinator.update_interval.total_seconds() if coordinator.update_interval else None
         ),

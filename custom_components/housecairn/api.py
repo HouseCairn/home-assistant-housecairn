@@ -2,8 +2,8 @@
 
 Written against the OpenAPI schema of Housecairn (a copy is in
 tests/fixtures/openapi.yaml). It reads with the `read` scope; it closes an occurrence
-("Done"), takes a "Done" back and reports a problem with the `write` scope. The token
-is bound to the home it shows.
+("Done"), takes a "Done" back, reports a problem and adds an item with the `write`
+scope. The token is bound to the home it shows.
 
 The token is sent in the `Authorization` header and nowhere else: it is never
 part of an address, a log line or an exception message.
@@ -38,6 +38,10 @@ OPEN_STATUS: Final = "planned"
 REPORT_WAITING_STATUSES: Final = ("open", "task")
 # An occurrence that cannot exist: the probe of the `write` scope (see has_write_scope).
 NO_OCCURRENCE: Final = "00000000-0000-0000-0000-000000000000"
+# The kind of an item that is a device, not a surface (schema `ItemKindEnum`).
+ITEM_KIND_EQUIPMENT: Final = "equipment"
+# The longest name, brand and model of an item (schema `ItemRequest`).
+ITEM_TEXT_MAX: Final = 120
 
 
 class HouseCairnError(Exception):
@@ -172,6 +176,19 @@ class Room:
     @classmethod
     def from_api(cls, data: dict[str, Any]) -> Room:
         return cls(id=str(data["id"]), name=str(data["name"]))
+
+
+@dataclass(frozen=True, slots=True)
+class Item:
+    """An item of a room, equipment or surface (schema `Item`), reduced to its place."""
+
+    id: str
+    room: str
+    name: str
+
+    @classmethod
+    def from_api(cls, data: dict[str, Any]) -> Item:
+        return cls(id=str(data["id"]), room=str(data["room"]), name=str(data["name"]))
 
 
 @dataclass(frozen=True, slots=True)
@@ -412,6 +429,27 @@ class HouseCairnClient:
         """The rooms of the home (`GET /rooms/`)."""
         rows = await self._list(f"/homes/{home_id}/rooms/", {})
         return Rows([Room.from_api(row) for row in rows.items], rows.complete)
+
+    async def room_items(self, home_id: str, room_id: str) -> Rows[Item]:
+        """The items of one room (`GET /items/?room=<room_id>`)."""
+        rows = await self._list(f"/homes/{home_id}/items/", {"room": room_id})
+        return Rows([Item.from_api(row) for row in rows.items], rows.complete)
+
+    async def item(self, home_id: str, item_id: str) -> Item:
+        """One item (`GET /items/{item_id}/`); a deleted item is a 404."""
+        return Item.from_api(await self._get(f"/homes/{home_id}/items/{item_id}/", {}))
+
+    async def create_item(
+        self, home_id: str, room_id: str, name: str, *, brand: str = "", model: str = ""
+    ) -> Item:
+        """Add a piece of equipment to a room (`POST /items/`). Needs `write`."""
+        body: dict[str, Any] = {"room": room_id, "name": name, "kind": ITEM_KIND_EQUIPMENT}
+        if brand:
+            body["brand"] = brand
+        if model:
+            body["model"] = model
+        data = await self._request("POST", f"/homes/{home_id}/items/", json=body)
+        return Item.from_api(data)
 
     async def low_stock(self, home_id: str) -> Rows[Article]:
         """Stock items at or below their threshold (`GET /articles/?low=true`)."""
