@@ -118,6 +118,8 @@ async def test_a_report_made_into_a_task_is_not_made_again(
         # Another place, or none, is another problem.
         {"title": REPORTED},
         {"title": REPORTED, "room": HALLWAY},
+        # Only the room differs from a report without a place.
+        {"title": "Front door lock is stiff", "room": HALLWAY},
         # Another title at the same place too.
         {"title": "Smoke detector beeps", "item": DETECTOR},
     ],
@@ -146,6 +148,8 @@ async def test_two_reports_at_once_make_one(
     state = {"created": False}
 
     async def reports(method: str, url: Any, _data: Any) -> Any:
+        # Let the other call run meanwhile, as a real request would.
+        await asyncio.sleep(0)
         status = dict(url.query)["status"]
         name = "reports_task_none"
         if status == "open":
