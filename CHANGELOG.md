@@ -3,6 +3,24 @@
 The versions of the integration, the newest first. The plan of each lot is in
 [docs/plan.md](docs/plan.md).
 
+## Unreleased
+
+- **`housecairn.report` finds the place from the entity** that saw the problem
+  (`entity_id`): the room of the home with the name of the area of the entity
+  (or of its device), whatever the case, accents and spaces, and the item of
+  that room with the name of the device. With `create_item`, the device is added
+  to the room as a piece of equipment, with its manufacturer and model, when the
+  room has no item by that name. Each device is linked to its item in the
+  storage of the integration, so renaming either keeps the link; an item deleted
+  in Housecairn is looked for again. `area_id` forces the room. No room is ever
+  created, and nothing is changed in Home Assistant. The answer adds
+  `room_match` and `item_match`. The `room`, `item` and `article` identifiers
+  still come first.
+- **Two blueprints** in `blueprints/automation/housecairn/`: report when an
+  entity stays in a state (`on` for five minutes by default), and when a value
+  stays below a threshold (20 for five minutes by default).
+- Diagnostics count the devices linked to an item, without names.
+
 ## 0.1.1
 
 A fix version: the integration logo shows in Home Assistant 2026.3 and later, once

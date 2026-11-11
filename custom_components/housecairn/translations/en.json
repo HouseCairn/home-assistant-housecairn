@@ -130,7 +130,7 @@
   "services": {
     "report": {
       "name": "Report a problem",
-      "description": "Reports a problem in a home of Housecairn, as the person who owns the token. Nothing is created when a report of that person with the same title and the same place is not closed yet. Needs a token with the Write right.",
+      "description": "Reports a problem in a home of Housecairn, as the person who owns the token. Nothing is created when a report of that person with the same title and the same place is not closed yet. Needs a token with the Write right. Without an identifier, the place is found from the entity that saw the problem: the room by its area, the item by its device.",
       "fields": {
         "config_entry_id": {
           "name": "Home",
@@ -151,6 +151,18 @@
         "article": {
           "name": "Stock item",
           "description": "Identifier of a stock item of the home, to say which."
+        },
+        "entity_id": {
+          "name": "Entity",
+          "description": "The entity that saw the problem, when no identifier is given: its area (or its device's) gives the room of the same name, and its device the item of that room with the same name."
+        },
+        "area_id": {
+          "name": "Area",
+          "description": "An area whose room of the same name is used instead of the area of the entity."
+        },
+        "create_item": {
+          "name": "Add the device if missing",
+          "description": "When the room has no item with the name of the device, add the device to the room as a piece of equipment, with its manufacturer and model."
         }
       }
     }

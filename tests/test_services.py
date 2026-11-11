@@ -29,6 +29,8 @@ HALLWAY = "978c6a38-de2c-4c8e-8eff-ee38d0536a82"
 REPORTED = "Smoke detector battery low"
 # An article of the home (any identifier would do: it is only sent as the place).
 SPARE_BATTERY = "2a9c0edf-e533-4d21-b185-0913b8654f08"
+# Without an entity or an area, nothing is looked up (tests/test_places.py does it).
+NOT_LOOKED_UP = {"room_match": "none", "item_match": "none"}
 
 
 def _reports(aioclient_mock: AiohttpClientMocker, open_name: str, task_name: str) -> None:
@@ -73,7 +75,12 @@ async def test_a_report_is_created_and_its_identifier_returned(
     response = await _report(hass, entry.entry_id, title=f"  {REPORTED} ", item=DETECTOR)
 
     created = load("report_created")["body"]
-    assert response == {"report_id": created["id"], "created": True, "status": "open"}
+    assert response == {
+        "report_id": created["id"],
+        "created": True,
+        "status": "open",
+        **NOT_LOOKED_UP,
+    }
     # The title is sent as Housecairn keeps it, with the one place given.
     assert _post_bodies(aioclient_mock) == [{"title": REPORTED, "item": DETECTOR}]
     for method, url, _data, headers in aioclient_mock.mock_calls:
@@ -93,7 +100,12 @@ async def test_the_same_report_still_open_is_not_made_twice(
     response = await _report(hass, entry.entry_id, title=REPORTED.upper(), item=DETECTOR)
 
     existing = load("report_created")["body"]
-    assert response == {"report_id": existing["id"], "created": False, "status": "open"}
+    assert response == {
+        "report_id": existing["id"],
+        "created": False,
+        "status": "open",
+        **NOT_LOOKED_UP,
+    }
     assert _post_bodies(aioclient_mock) == []
 
 
@@ -111,7 +123,12 @@ async def test_white_space_inside_the_title_does_not_make_another_report(
     )
 
     existing = load("reports_open_after")["body"]["results"][0]
-    assert response == {"report_id": existing["id"], "created": False, "status": "open"}
+    assert response == {
+        "report_id": existing["id"],
+        "created": False,
+        "status": "open",
+        **NOT_LOOKED_UP,
+    }
     assert _post_bodies(aioclient_mock) == []
 
 
@@ -127,7 +144,12 @@ async def test_a_report_made_into_a_task_is_not_made_again(
 
     response = await _report(hass, entry.entry_id, title=task["title"])
 
-    assert response == {"report_id": task["id"], "created": False, "status": "task"}
+    assert response == {
+        "report_id": task["id"],
+        "created": False,
+        "status": "task",
+        **NOT_LOOKED_UP,
+    }
     assert _post_bodies(aioclient_mock) == []
 
 
@@ -262,6 +284,7 @@ async def test_a_refused_report_says_why(
         {"title": "   "},
         {"title": REPORTED, "room": HALLWAY, "item": DETECTOR},
         {"title": REPORTED, "room": "not-an-identifier"},
+        {"title": REPORTED, "entity_id": "not an entity"},
         {},
     ],
 )

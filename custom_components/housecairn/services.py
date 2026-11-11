@@ -5,6 +5,11 @@ the Report screen of Housecairn, under the person who owns the token. It needs a
 with the `write` scope. It never makes a duplicate: when a report of that person that is
 not closed yet has the same title and the same place, nothing is created and the answer
 says so. The answer (`response_variable`) carries the identifier of the report.
+
+The place is an identifier (`room`, `item`, `article`), or else it is found from the
+entity that saw the problem (`entity_id`, see places.py): the room by the area, the
+item by the device, added to the room when `create_item` is true. The answer then says
+how (`room_match`, `item_match`).
 """
 
 from __future__ import annotations
@@ -35,8 +40,11 @@ from .api import (
     Report,
 )
 from .const import (
+    ATTR_AREA_ID,
     ATTR_ARTICLE,
     ATTR_CONFIG_ENTRY_ID,
+    ATTR_CREATE_ITEM,
+    ATTR_ENTITY_ID,
     ATTR_ITEM,
     ATTR_ROOM,
     ATTR_TITLE,
@@ -45,6 +53,7 @@ from .const import (
     SERVICE_REPORT,
 )
 from .coordinator import HouseCairnConfigEntry, HouseCairnCoordinator
+from .places import Place
 
 PLACE = "place"
 
@@ -62,6 +71,20 @@ def _title(value: Any) -> str:
     return title
 
 
+def _optional(value: Any) -> str | None:
+    """A text that may be left empty, as a blueprint without an area gives it."""
+    if value is None:
+        return None
+    text = cv.string(value).strip()
+    return text or None
+
+
+def _entity(value: Any) -> str | None:
+    """An entity id, or nothing."""
+    text = _optional(value)
+    return cv.entity_id(text) if text else None
+
+
 REPORT_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_CONFIG_ENTRY_ID): cv.string,
@@ -70,6 +93,10 @@ REPORT_SCHEMA = vol.Schema(
         vol.Exclusive(ATTR_ROOM, PLACE): _identifier,
         vol.Exclusive(ATTR_ITEM, PLACE): _identifier,
         vol.Exclusive(ATTR_ARTICLE, PLACE): _identifier,
+        # Otherwise the place is found from the entity that saw the problem.
+        vol.Optional(ATTR_ENTITY_ID): _entity,
+        vol.Optional(ATTR_AREA_ID): _optional,
+        vol.Optional(ATTR_CREATE_ITEM, default=False): cv.boolean,
     }
 )
 
@@ -111,16 +138,39 @@ async def _async_report(call: ServiceCall) -> ServiceResponse:
     place: dict[str, str | None] = {
         name: call.data.get(name) for name in (ATTR_ROOM, ATTR_ITEM, ATTR_ARTICLE)
     }
+    entity_id: str | None = call.data.get(ATTR_ENTITY_ID)
+    area_id: str | None = call.data.get(ATTR_AREA_ID)
+    found = Place()
     async with coordinator.report_lock:
         try:
+            if not any(place.values()) and (entity_id or area_id):
+                found = await coordinator.places.find(
+                    entity_id, area_id, call.data[ATTR_CREATE_ITEM]
+                )
+                # One place at most: the item says the room already.
+                if found.item is not None:
+                    place[ATTR_ITEM] = found.item
+                else:
+                    place[ATTR_ROOM] = found.room
             waiting = await coordinator.client.waiting_reports(coordinator.home_id)
             existing = next((r for r in waiting if _same(r, title, place)), None)
             if existing is not None:
-                return {"report_id": existing.id, "created": False, "status": existing.status}
+                return _answer(existing, False, found)
             report = await coordinator.client.create_report(coordinator.home_id, title, **place)
         except HouseCairnError as exc:
             _raise(call.hass, coordinator, exc)
-    return {"report_id": report.id, "created": True, "status": report.status}
+    return _answer(report, True, found)
+
+
+def _answer(report: Report, created: bool, found: Place) -> ServiceResponse:
+    """The report, and how its room and item were found (`none`: not looked up or none)."""
+    return {
+        "report_id": report.id,
+        "created": created,
+        "status": report.status,
+        "room_match": found.room_match.value,
+        "item_match": found.item_match.value,
+    }
 
 
 def _raise(

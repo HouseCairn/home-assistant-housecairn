@@ -138,7 +138,10 @@ without it the action fails and says so.
 | --- | --- |
 | `config_entry_id` | The home (its entry in Home Assistant). Required. |
 | `title` | What is wrong, 200 characters at most. Required. |
-| `room`, `item`, `article` | The identifier in Housecairn of a room, an item or a stock item, to say where. At most one. Optional. |
+| `room`, `item`, `article` | The identifier in Housecairn of a room, an item or a stock item, to say where. At most one. Optional; when given, it comes before the three fields below. |
+| `entity_id` | The entity that saw the problem: the place is then found from it (see [Where the report goes](#where-the-report-goes)). Optional. |
+| `area_id` | An area of Home Assistant whose room is used instead of the area of the entity. Optional. |
+| `create_item` | Add the device of the entity to the room when the room has no item with its name. Optional, false by default (true in the blueprints). |
 
 It never makes a duplicate. When a report of the same person that is not closed
 yet (still open, or made into a task) has the same title, whatever the case, and
@@ -146,9 +149,14 @@ the same place, nothing is created. The response tells which:
 
 ```yaml
 report_id: 3f2b0c7e-1d2a-4c5b-9e8f-0a1b2c3d4e5f
-created: false   # true when the report was created now
-status: open     # or task
+created: false     # true when the report was created now
+status: open       # or task
+room_match: matched  # or none, ambiguous
+item_match: created  # or linked, matched, none, ambiguous
 ```
+
+`room_match` and `item_match` say how the place was found from `entity_id` (see
+below); both are `none` when an identifier was given or nothing was looked up.
 
 Example: the battery of a smoke detector has been low for an hour.
 
@@ -178,6 +186,92 @@ automation:
 The automation editor offers the home in a list. Housecairn counts at most twenty
 waiting reports per person and per home, and refuses more until some are dealt with.
 
+### Where the report goes
+
+With `entity_id`, nothing has to be looked up by hand: the report goes where the
+entity is. Say a boiler in Home Assistant is in the area **Kitchen**, and its
+fault sensor turns on. The report goes to the room **Kitchen** of the home in
+Housecairn, on the item **Boiler** of that room; if the room has no such item and
+`create_item` is true, the boiler is added to the room first.
+
+1. **The room** is the area of the entity, or else the area of its device. It is
+   matched to a room of the home by name, whatever the case, the accents and the
+   spaces (the area "Entrée" matches the room "entree"). `area_id` gives another
+   area. No room is ever created in Housecairn: when no room has that name, or
+   several have, the report has no place (`room_match: none` or `ambiguous`).
+2. **The item** is the device of the entity, found in this order:
+   - the item already linked to that device (`linked`). The link is kept by
+     Home Assistant, in the storage of the integration; it holds when the device
+     or the item is renamed, and is forgotten when the item was deleted in
+     Housecairn, the search then starting again;
+   - an item of the room with the name of the device, the name you gave it in
+     Home Assistant if any (`matched`), with the same comparison as the room;
+   - with `create_item`, a new piece of equipment in the room, named after the
+     device, with its manufacturer as the brand and its model (`created`).
+   Two items of the room with that name: none is chosen and none is added
+   (`ambiguous`). An entity without a device has no item; without a room, only
+   an item already linked to the device is used.
+3. The report then goes to the item, which says the room, or to the room alone.
+
+What it needs:
+
+- the **same name** for the area in Home Assistant and the room in Housecairn;
+- a token with the **Write** right, as for every report, and, to add a device,
+  a person who may change the home (an owner or a member: a viewer can report
+  but not add items, and the report then goes to the room alone).
+
+Nothing is changed in Home Assistant: no area, device or entity is created or
+edited, and the items of Housecairn do not become devices of Home Assistant.
+
+Example: a leak sensor on for five minutes, wherever it is.
+
+```yaml
+automation:
+  - alias: "Leak"
+    triggers:
+      - trigger: state
+        entity_id: binary_sensor.boiler_leak
+        to: "on"
+        for: "00:05:00"
+    actions:
+      - action: housecairn.report
+        data:
+          config_entry_id: 0123456789abcdef0123456789abcdef
+          title: "Leak: {{ trigger.to_state.name }}"
+          entity_id: "{{ trigger.entity_id }}"
+          create_item: true
+```
+
+### Blueprints
+
+Two blueprints write that automation for you. Import one with the button, or in
+**Settings > Automations & scenes > Blueprints > Import blueprint** with the
+address below it, then create an automation from it: choose the home and the
+entities, and the rest has defaults.
+
+**Report when an entity stays in a state** (a leak, a `problem` sensor, a boiler
+fault): the state (`on` by default) and how long (five minutes by default).
+
+[![Open your Home Assistant instance and show the blueprint import dialog with a specific blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FHouseCairn%2Fhome-assistant-housecairn%2Fmain%2Fblueprints%2Fautomation%2Fhousecairn%2Freport_on_state.yaml)
+
+```text
+https://raw.githubusercontent.com/HouseCairn/home-assistant-housecairn/main/blueprints/automation/housecairn/report_on_state.yaml
+```
+
+**Report when a value stays below a threshold** (a battery level): the threshold
+(20 by default) and how long (five minutes by default).
+
+[![Open your Home Assistant instance and show the blueprint import dialog with a specific blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FHouseCairn%2Fhome-assistant-housecairn%2Fmain%2Fblueprints%2Fautomation%2Fhousecairn%2Freport_below_threshold.yaml)
+
+```text
+https://raw.githubusercontent.com/HouseCairn/home-assistant-housecairn/main/blueprints/automation/housecairn/report_below_threshold.yaml
+```
+
+Both also take a title (by default "Problem detected:" or "Low:" and the name of
+the entity), an area that forces the room, and "Add the device if missing" (on by
+default). They run one report after the other (`mode: queued`), and a report that
+is not closed yet is not made again.
+
 ### Requests
 
 The integration reads Housecairn every five minutes, with five requests: the two
@@ -185,7 +279,9 @@ task lists and the stock list of the sensors (the to-do list uses the same two
 task lists), the tasks without a date (`due=none`), and the tasks done in the
 last seven days. The rooms are read once, and again only when a listed task is
 in a room not seen yet. The action reads the reports of the person that are not
-closed (two requests), then creates one if needed. At setup it also
+closed (two requests), then creates one if needed. With `entity_id`, it also
+reads the rooms (kept one minute), the linked item or the items of the room, and
+adds the item if asked: never between two calls, never on a schedule. At setup it also
 sends one harmless request to find out whether the token has the Write right
 (an undo of a task that does not exist: Housecairn refuses it without changing
 anything). The sensors and the list become unavailable while Housecairn cannot
@@ -198,7 +294,8 @@ both, or the two sensors may disagree for a few hours around midnight.
 ## Diagnostics
 
 **Settings > Devices & services > Housecairn > Download diagnostics** gives the
-counts and dates the integration read, and whether the last update succeeded.
+counts and dates the integration read, whether the last update succeeded, and
+how many devices are linked to an item (a count, without any name or identifier).
 The token, the address of the instance, the name of the home, the names of rooms
 and the titles of tasks and stock items are left out, so the file can be attached
 to an issue.

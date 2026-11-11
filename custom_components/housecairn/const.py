@@ -32,5 +32,11 @@ ATTR_TITLE: Final = "title"
 ATTR_ROOM: Final = "room"
 ATTR_ITEM: Final = "item"
 ATTR_ARTICLE: Final = "article"
+# The entity that saw the problem: its area gives the room, its device the item.
+ATTR_ENTITY_ID: Final = "entity_id"
+# An area of Home Assistant that gives the room instead of the area of the entity.
+ATTR_AREA_ID: Final = "area_id"
+# Whether the device of the entity is added as an item when the room has none by its name.
+ATTR_CREATE_ITEM: Final = "create_item"
 # Housecairn refuses a longer title (reports.models.TITLE_MAX_LENGTH).
 REPORT_TITLE_MAX: Final = 200

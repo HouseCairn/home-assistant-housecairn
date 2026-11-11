@@ -25,6 +25,7 @@ from .api import (
     Occurrence,
 )
 from .const import CONF_HOME_ID, DOMAIN, RECENTLY_DONE, TODO_HORIZON, UPDATE_INTERVAL
+from .places import PlaceFinder
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -84,6 +85,8 @@ class HouseCairnCoordinator(DataUpdateCoordinator[HouseCairnData]):
         # One report at a time per home, so that two automations firing together cannot
         # both find no report and both create one.
         self.report_lock = asyncio.Lock()
+        # The room and item of a report, from the entity that fired; under report_lock.
+        self.places = PlaceFinder(hass, entry.entry_id, client, self.home_id)
 
     async def async_probe_write(self) -> None:
         """Find out whether the token has the `write` scope; nothing is changed."""

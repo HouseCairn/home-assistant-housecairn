@@ -10,11 +10,13 @@ from homeassistant.const import CONF_API_TOKEN, CONF_URL, CONF_VERIFY_SSL, Platf
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.storage import Store
 from homeassistant.helpers.typing import ConfigType
 
 from .api import HouseCairnClient
 from .const import DOMAIN
 from .coordinator import HouseCairnConfigEntry, HouseCairnCoordinator
+from .places import STORAGE_VERSION, store_key
 from .services import async_setup_services
 
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.TODO]
@@ -45,3 +47,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: HouseCairnConfigEntry) -
 async def async_unload_entry(hass: HomeAssistant, entry: HouseCairnConfigEntry) -> bool:
     """Unload the entities of the home."""
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: HouseCairnConfigEntry) -> None:
+    """Forget the devices linked to items of the home."""
+    await Store[dict[str, dict[str, str]]](
+        hass, STORAGE_VERSION, store_key(entry.entry_id)
+    ).async_remove()

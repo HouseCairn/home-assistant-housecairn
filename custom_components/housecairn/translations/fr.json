@@ -130,7 +130,7 @@
   "services": {
     "report": {
       "name": "Signaler un problème",
-      "description": "Signale un problème dans un logement Housecairn, au nom de la personne qui possède le jeton. Rien n'est créé quand un signalement de cette personne, avec le même titre et le même endroit, n'est pas encore clos. Exige un jeton avec le droit Écriture.",
+      "description": "Signale un problème dans un logement Housecairn, au nom de la personne qui possède le jeton. Rien n'est créé quand un signalement de cette personne, avec le même titre et le même endroit, n'est pas encore clos. Exige un jeton avec le droit Écriture. Sans identifiant, l'endroit se déduit de l'entité qui a vu le problème : la pièce par sa zone, l'élément par son appareil.",
       "fields": {
         "config_entry_id": {
           "name": "Logement",
@@ -151,6 +151,18 @@
         "article": {
           "name": "Article",
           "description": "Identifiant d'un article du stock du logement, pour dire lequel."
+        },
+        "entity_id": {
+          "name": "Entité",
+          "description": "L'entité qui a vu le problème, quand aucun identifiant n'est donné : sa zone (ou celle de son appareil) donne la pièce du même nom, et son appareil l'élément de cette pièce du même nom."
+        },
+        "area_id": {
+          "name": "Zone",
+          "description": "Une zone dont la pièce du même nom est prise à la place de la zone de l'entité."
+        },
+        "create_item": {
+          "name": "Ajouter l'appareil s'il manque",
+          "description": "Quand la pièce n'a aucun élément au nom de l'appareil, ajoute l'appareil à la pièce comme équipement, avec son fabricant et son modèle."
         }
       }
     }
