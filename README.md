@@ -30,6 +30,10 @@ documentation is at <https://docs.housecairn.app>.
 - **An action to report a problem**: `housecairn.report` creates a report in
   Housecairn from an automation, without ever making a duplicate (example in
   the [guide](docs/guide.md#action-report-a-problem)).
+- **Two blueprints to report a problem** from an automation without YAML: an
+  entity stays in a state, or a value stays below a threshold (a battery, for
+  example). Import them from the
+  [guide](docs/guide.md#blueprints-report-a-problem-without-writing-yaml).
 - **A Housecairn API token, never a Home Assistant token**: limited to the homes
   and rights you choose in Housecairn, revocable there at any time.
 - **Reauthentication** when the token expires or is revoked: Home Assistant asks

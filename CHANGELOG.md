@@ -3,6 +3,13 @@
 The versions of the integration, the newest first. The plan of each lot is in
 [docs/plan.md](docs/plan.md).
 
+## Unreleased
+
+- **Blueprints** in `blueprints/automation/housecairn/`: *report a problem when
+  an entity is in a state* and *report a problem when a value is below a
+  threshold*, two ready-made automations around `housecairn.report`, imported
+  with a button or an address ([guide](docs/guide.md#blueprints-report-a-problem-without-writing-yaml)).
+
 ## 0.1.1
 
 A fix version: the integration logo shows in Home Assistant 2026.3 and later, once

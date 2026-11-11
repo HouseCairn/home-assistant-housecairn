@@ -1,0 +1,110 @@
+blueprint:
+  name: Housecairn - report a problem when a value is below a threshold
+  description: >-
+    Reports a problem in Housecairn when the numeric value of one of the chosen
+    entities stays below a threshold for a while: the battery of a smoke
+    detector or of a sensor, the level of a tank. It calls the
+    `housecairn.report` action of the Housecairn integration, which never makes
+    a duplicate of a report that is not closed yet. The token of the
+    integration needs the Write right.
+
+
+    Housecairn identifiers (room, item, stock item) are the UUID in the address
+    of the page in Housecairn: `/h/<home id>/rooms/<UUID>/`,
+    `/h/<home id>/items/<UUID>/` or `/h/<home id>/stock/<UUID>/`. Fill in at
+    most one of the three, or leave them all empty.
+  domain: automation
+  homeassistant:
+    min_version: 2026.10.0
+  source_url: https://github.com/HouseCairn/home-assistant-housecairn/blob/main/blueprints/automation/housecairn/report_below_threshold.yaml
+  input:
+    entities:
+      name: Entities
+      description: The entities to watch, with a numeric state (such as a battery level).
+      selector:
+        entity:
+          multiple: true
+    threshold:
+      name: Threshold
+      description: The value below which there is a problem (20 for a battery in percent).
+      default: 20
+      selector:
+        number:
+          mode: box
+          step: any
+    duration:
+      name: For how long
+      description: >-
+        How long the value must stay below the threshold before it is reported.
+        Brief dips are ignored.
+      default:
+        hours: 0
+        minutes: 5
+        seconds: 0
+      selector:
+        duration:
+    config_entry:
+      name: Housecairn home
+      description: The Housecairn home to report the problem in.
+      selector:
+        config_entry:
+          integration: housecairn
+    report_title:
+      name: Title of the report
+      description: >-
+        What is wrong, 200 characters at most. A template: `trigger.to_state.name`
+        is the name of the entity that changed. Housecairn does not report the
+        same title at the same place twice while the first report is not closed.
+      default: "Battery low: {{ trigger.to_state.name }}"
+      selector:
+        text:
+    room:
+      name: Room (optional)
+      description: >-
+        The UUID of a room in Housecairn: the end of the address of its page,
+        `/h/<home id>/rooms/<UUID>/`. At most one of room, item and stock item.
+      default: ""
+      selector:
+        text:
+    item:
+      name: Item (optional)
+      description: >-
+        The UUID of an item in Housecairn: the end of the address of its page,
+        `/h/<home id>/items/<UUID>/`. At most one of room, item and stock item.
+      default: ""
+      selector:
+        text:
+    article:
+      name: Stock item (optional)
+      description: >-
+        The UUID of a stock item in Housecairn: the end of the address of its
+        page, `/h/<home id>/stock/<UUID>/`. At most one of room, item and stock
+        item.
+      default: ""
+      selector:
+        text:
+
+mode: queued
+max: 10
+
+variables:
+  config_entry_id: !input config_entry
+  report_title: !input report_title
+  room_id: !input room
+  item_id: !input item
+  article_id: !input article
+
+triggers:
+  - trigger: numeric_state
+    entity_id: !input entities
+    below: !input threshold
+    for: !input duration
+
+actions:
+  - action: housecairn.report
+    data: >-
+      {% set data = {"config_entry_id": config_entry_id, "title": report_title} %}
+      {% if room_id | trim %}{% set data = data | combine({"room": room_id | trim}) %}{% endif %}
+      {% if item_id | trim %}{% set data = data | combine({"item": item_id | trim}) %}{% endif %}
+      {% if article_id | trim %}{% set data = data | combine({"article": article_id | trim}) %}{% endif %}
+      {{ data }}

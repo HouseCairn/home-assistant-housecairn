@@ -1,0 +1,109 @@
+blueprint:
+  name: Housecairn - report a problem when an entity is in a state
+  description: >-
+    Reports a problem in Housecairn when one of the chosen entities stays in a
+    given state for a while: a leak sensor that is `on`, a `problem` binary
+    sensor, a filter alert. It calls the `housecairn.report` action of the
+    Housecairn integration, which never makes a duplicate of a report that is
+    not closed yet. The token of the integration needs the Write right.
+
+
+    Housecairn identifiers (room, item, stock item) are the UUID in the address
+    of the page in Housecairn: `/h/<home id>/rooms/<UUID>/`,
+    `/h/<home id>/items/<UUID>/` or `/h/<home id>/stock/<UUID>/`. Fill in at
+    most one of the three, or leave them all empty.
+  domain: automation
+  homeassistant:
+    min_version: 2026.10.0
+  source_url: https://github.com/HouseCairn/home-assistant-housecairn/blob/main/blueprints/automation/housecairn/report_on_state.yaml
+  input:
+    entities:
+      name: Entities
+      description: The entities to watch.
+      selector:
+        entity:
+          multiple: true
+    state:
+      name: State
+      description: >-
+        The state that is a problem, as Home Assistant writes it: `on`,
+        `problem`, `wet`, `open`...
+      default: "on"
+      selector:
+        text:
+    duration:
+      name: For how long
+      description: >-
+        How long the entity must stay in that state before it is reported.
+        Brief changes are ignored.
+      default:
+        hours: 0
+        minutes: 5
+        seconds: 0
+      selector:
+        duration:
+    config_entry:
+      name: Housecairn home
+      description: The Housecairn home to report the problem in.
+      selector:
+        config_entry:
+          integration: housecairn
+    report_title:
+      name: Title of the report
+      description: >-
+        What is wrong, 200 characters at most. A template: `trigger.to_state.name`
+        is the name of the entity that changed. Housecairn does not report the
+        same title at the same place twice while the first report is not closed.
+      default: "Problem: {{ trigger.to_state.name }}"
+      selector:
+        text:
+    room:
+      name: Room (optional)
+      description: >-
+        The UUID of a room in Housecairn: the end of the address of its page,
+        `/h/<home id>/rooms/<UUID>/`. At most one of room, item and stock item.
+      default: ""
+      selector:
+        text:
+    item:
+      name: Item (optional)
+      description: >-
+        The UUID of an item in Housecairn: the end of the address of its page,
+        `/h/<home id>/items/<UUID>/`. At most one of room, item and stock item.
+      default: ""
+      selector:
+        text:
+    article:
+      name: Stock item (optional)
+      description: >-
+        The UUID of a stock item in Housecairn: the end of the address of its
+        page, `/h/<home id>/stock/<UUID>/`. At most one of room, item and stock
+        item.
+      default: ""
+      selector:
+        text:
+
+mode: queued
+max: 10
+
+variables:
+  config_entry_id: !input config_entry
+  report_title: !input report_title
+  room_id: !input room
+  item_id: !input item
+  article_id: !input article
+
+triggers:
+  - trigger: state
+    entity_id: !input entities
+    to: !input state
+    for: !input duration
+
+actions:
+  - action: housecairn.report
+    data: >-
+      {% set data = {"config_entry_id": config_entry_id, "title": report_title} %}
+      {% if room_id | trim %}{% set data = data | combine({"room": room_id | trim}) %}{% endif %}
+      {% if item_id | trim %}{% set data = data | combine({"item": item_id | trim}) %}{% endif %}
+      {% if article_id | trim %}{% set data = data | combine({"article": article_id | trim}) %}{% endif %}
+      {{ data }}

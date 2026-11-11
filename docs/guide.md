@@ -178,6 +178,79 @@ automation:
 The automation editor offers the home in a list. Housecairn counts at most twenty
 waiting reports per person and per home, and refuses more until some are dealt with.
 
+### Blueprints: report a problem without writing YAML
+
+Two blueprints create the automation of the example above in a few clicks. Both
+call `housecairn.report`, so they need a token with the Write right, and they
+never make a duplicate: while the first report is not closed in Housecairn, the
+same title at the same place is not reported again. They call nothing else, hold
+no token and use no address.
+
+**Report when an entity is in a state** (`report_on_state.yaml`): one or more
+entities stay in a state for a while (default `on` for 5 minutes). For a leak
+detector, a `problem` binary sensor, a filter alert.
+
+[![Import the blueprint into your Home Assistant.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FHouseCairn%2Fhome-assistant-housecairn%2Fmain%2Fblueprints%2Fautomation%2Fhousecairn%2Freport_on_state.yaml)
+
+Or paste this address in **Settings > Automations & scenes > Blueprints > Import
+blueprint**:
+
+```text
+https://raw.githubusercontent.com/HouseCairn/home-assistant-housecairn/main/blueprints/automation/housecairn/report_on_state.yaml
+```
+
+**Report when a value is below a threshold** (`report_below_threshold.yaml`): the
+numeric value of one or more entities stays below a threshold for a while
+(default 20 for 5 minutes). For the batteries of smoke detectors and sensors.
+
+[![Import the blueprint into your Home Assistant.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FHouseCairn%2Fhome-assistant-housecairn%2Fmain%2Fblueprints%2Fautomation%2Fhousecairn%2Freport_below_threshold.yaml)
+
+```text
+https://raw.githubusercontent.com/HouseCairn/home-assistant-housecairn/main/blueprints/automation/housecairn/report_below_threshold.yaml
+```
+
+Inputs (both blueprints):
+
+| Input | |
+| --- | --- |
+| Entities | The entities to watch, one or several. |
+| State, or threshold | The state that is a problem (any text: `on`, `problem`, `wet`...), or the value below which there is one. |
+| For how long | How long it must last before it is reported; brief changes are ignored. |
+| Housecairn home | The home to report in (the automation editor lists the homes of the integration). |
+| Title of the report | A template, 200 characters at most. `{{ trigger.to_state.name }}` is the name of the entity that triggered. |
+| Room, item, stock item | Optional, at most one. The UUID in the address of its page in Housecairn: `/h/<home id>/rooms/<UUID>/`, `/h/<home id>/items/<UUID>/` or `/h/<home id>/stock/<UUID>/`. |
+
+The default titles are in English (`Problem: {{ trigger.to_state.name }}` and
+`Battery low: {{ trigger.to_state.name }}`). To have them in your language,
+change the **Title of the report** input when you create the automation, for
+example `Pile faible : {{ trigger.to_state.name }}`. The title also decides what
+counts as a duplicate, so keep it the same from one run to the next for a given
+entity. The blueprints run in `queued` mode, so two entities that change together
+are both reported, one after the other.
+
+Example: the same smoke detector as above, from the blueprint. In **Settings >
+Automations & scenes > Create automation > Use a blueprint**, pick **Housecairn -
+report a problem when a value is below a threshold**, then choose the battery
+sensor, a threshold of 20, one hour, the home, and the detector's UUID as the
+item. Saved as YAML, the automation is:
+
+```yaml
+alias: "Smoke detector battery low"
+use_blueprint:
+  path: housecairn/report_below_threshold.yaml
+  input:
+    entities:
+      - sensor.hallway_smoke_detector_battery
+    threshold: 20
+    duration:
+      hours: 1
+      minutes: 0
+      seconds: 0
+    config_entry: 0123456789abcdef0123456789abcdef
+    report_title: "Smoke detector battery low"
+    item: 3f2b0c7e-1d2a-4c5b-9e8f-0a1b2c3d4e5f
+```
+
 ### Requests
 
 The integration reads Housecairn every five minutes, with five requests: the two
