@@ -1,0 +1,8 @@
+{
+  "status": 400,
+  "body": {
+    "detail": [
+      "Only a task that was marked done or skipped can be undone."
+    ]
+  }
+}

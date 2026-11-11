@@ -1,0 +1,8 @@
+{
+  "status": 400,
+  "body": {
+    "room": [
+      "Invalid pk \"00000000-0000-0000-0000-000000000000\" - object does not exist."
+    ]
+  }
+}

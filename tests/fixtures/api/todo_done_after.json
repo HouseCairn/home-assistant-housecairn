@@ -1,0 +1,72 @@
+{
+  "status": 200,
+  "body": {
+    "next": null,
+    "previous": null,
+    "results": [
+      {
+        "id": "a16c2a47-608f-47a4-9884-1c125d1c136a",
+        "task": "bfdee784-9b85-48d6-a1ef-a5a21f80face",
+        "task_title": "Descale the kettle",
+        "room": "e941c67e-27f5-480d-8f76-08a7e6f5ae1b",
+        "item": null,
+        "status": "done",
+        "due_on": "2026-11-09",
+        "visible_from": null,
+        "postponed_from": null,
+        "completed_on": "2026-11-09",
+        "completed_by": "3717fb5d-4522-4bf2-ae0f-e812dba174c4",
+        "completed_by_name": "alice",
+        "assignee_name": "",
+        "actual_cost": null,
+        "completion_note": "",
+        "is_overdue": false,
+        "stock": [],
+        "created_at": "2026-11-11T01:30:07.958729Z",
+        "updated_at": "2026-11-11T01:30:28.043839Z"
+      },
+      {
+        "id": "ed5c3cea-3fc6-405f-afd0-60eea233f10d",
+        "task": "ea905edf-985e-45aa-94c2-3e3cce0c5462",
+        "task_title": "Check the water softener",
+        "room": null,
+        "item": null,
+        "status": "done",
+        "due_on": "2026-11-08",
+        "visible_from": null,
+        "postponed_from": null,
+        "completed_on": "2026-11-08",
+        "completed_by": "3717fb5d-4522-4bf2-ae0f-e812dba174c4",
+        "completed_by_name": "alice",
+        "assignee_name": "",
+        "actual_cost": null,
+        "completion_note": "",
+        "is_overdue": false,
+        "stock": [],
+        "created_at": "2026-11-11T01:30:08.548247Z",
+        "updated_at": "2026-11-11T01:30:09.049850Z"
+      },
+      {
+        "id": "770c56eb-8c0b-4652-88aa-8d6add45775b",
+        "task": "8863b312-73a3-4187-898c-f4403b1d8fa9",
+        "task_title": "Clean the oven",
+        "room": "e941c67e-27f5-480d-8f76-08a7e6f5ae1b",
+        "item": null,
+        "status": "done",
+        "due_on": "2026-11-05",
+        "visible_from": null,
+        "postponed_from": null,
+        "completed_on": "2026-11-07",
+        "completed_by": "3717fb5d-4522-4bf2-ae0f-e812dba174c4",
+        "completed_by_name": "alice",
+        "assignee_name": "",
+        "actual_cost": null,
+        "completion_note": "",
+        "is_overdue": false,
+        "stock": [],
+        "created_at": "2026-11-11T01:30:08.438525Z",
+        "updated_at": "2026-11-11T01:30:08.665126Z"
+      }
+    ]
+  }
+}

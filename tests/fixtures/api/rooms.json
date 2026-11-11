@@ -5,7 +5,7 @@
     "previous": null,
     "results": [
       {
-        "id": "60d30404-5cdb-4cfd-9818-ce18317293a9",
+        "id": "e941c67e-27f5-480d-8f76-08a7e6f5ae1b",
         "name": "Kitchen",
         "kind": "other",
         "position": 0,
@@ -20,11 +20,11 @@
         "wall_covering": "",
         "memory_notes": "",
         "item_count": 0,
-        "created_at": "2026-11-10T10:59:21.870293Z",
-        "updated_at": "2026-11-10T10:59:21.870324Z"
+        "created_at": "2026-11-11T01:30:07.555047Z",
+        "updated_at": "2026-11-11T01:30:07.555109Z"
       },
       {
-        "id": "1f00c8db-f4d6-4b2d-97b3-7d9720c894c7",
+        "id": "d5572653-0f6a-453b-803f-99a421d6d6a7",
         "name": "Garage",
         "kind": "other",
         "position": 1,
@@ -39,8 +39,27 @@
         "wall_covering": "",
         "memory_notes": "",
         "item_count": 0,
-        "created_at": "2026-11-10T10:59:21.876071Z",
-        "updated_at": "2026-11-10T10:59:21.876101Z"
+        "created_at": "2026-11-11T01:30:07.642685Z",
+        "updated_at": "2026-11-11T01:30:07.642724Z"
+      },
+      {
+        "id": "978c6a38-de2c-4c8e-8eff-ee38d0536a82",
+        "name": "Hallway",
+        "kind": "other",
+        "position": 2,
+        "notes": "",
+        "paint_colour": "",
+        "paint_brand": "",
+        "paint_reference": "",
+        "paint_batch": "",
+        "paint_article": null,
+        "paint_article_name": null,
+        "floor_covering": "",
+        "wall_covering": "",
+        "memory_notes": "",
+        "item_count": 1,
+        "created_at": "2026-11-11T01:30:07.655553Z",
+        "updated_at": "2026-11-11T01:30:07.655723Z"
       }
     ]
   }

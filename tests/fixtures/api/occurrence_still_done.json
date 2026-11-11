@@ -1,0 +1,24 @@
+{
+  "status": 200,
+  "body": {
+    "id": "ed5c3cea-3fc6-405f-afd0-60eea233f10d",
+    "task": "ea905edf-985e-45aa-94c2-3e3cce0c5462",
+    "task_title": "Check the water softener",
+    "room": null,
+    "item": null,
+    "status": "done",
+    "due_on": "2026-11-08",
+    "visible_from": null,
+    "postponed_from": null,
+    "completed_on": "2026-11-08",
+    "completed_by": "3717fb5d-4522-4bf2-ae0f-e812dba174c4",
+    "completed_by_name": "alice",
+    "assignee_name": "",
+    "actual_cost": null,
+    "completion_note": "",
+    "is_overdue": false,
+    "stock": [],
+    "created_at": "2026-11-11T01:30:08.548247Z",
+    "updated_at": "2026-11-11T01:30:09.049850Z"
+  }
+}

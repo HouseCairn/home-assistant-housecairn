@@ -1,0 +1,8 @@
+{
+  "status": 400,
+  "body": {
+    "detail": [
+      "The next occurrence has been changed since: it cannot be undone any more."
+    ]
+  }
+}

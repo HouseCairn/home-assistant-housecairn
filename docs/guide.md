@@ -8,14 +8,15 @@ the [README](../README.md).
 Home Assistant calls the Housecairn API (`/api/v1`) with a **Housecairn API
 token** that you create in Housecairn and paste into the setup dialog.
 
-- You create the token in Housecairn itself: **More, Me, API tokens**. You name
+- You create the token in Housecairn itself: **More, Me, API tokens, Create a token**. You name
   it, tick the rights, choose the homes it opens and how long it lasts (30 days,
   90 days or a year); the token is shown once, so copy it into the setup dialog
   of Home Assistant. You can revoke it from the same screen at any time.
 - **No Home Assistant token is ever created, asked for or sent to Housecairn.**
 - Rights of the token: **Read** is enough for the sensors and the to-do list.
-  Add **Write** to be able to mark a task done from Home Assistant. Without
-  Write the to-do list is shown but read-only. The token is bound to the homes
+  Add **Write** to mark a task done from Home Assistant, take a "Done" back and
+  report a problem. Without Write the to-do list is shown but read-only, and
+  the action is refused. The token is bound to the homes
   you choose in Housecairn; it cannot see any other.
 - A token expires: when it does, Home Assistant shows a notification asking for a
   new one (see [Setup](#setup)).
@@ -29,11 +30,13 @@ token** that you create in Housecairn and paste into the setup dialog.
 
 - Home Assistant 2026.10 or later.
 - A Housecairn instance reachable from Home Assistant, new enough to have the
-  **API tokens** screen (the current `main`; no tagged release has it yet), and
-  a token with the Read right (and Write to mark tasks done) bound to the home
-  to show.
-- A home that requires signing in through an identity provider cannot be opened
-  with an API token, by design of Housecairn: such a home cannot be added.
+  **API tokens** screen, the filter of the tasks without a date and the tokens
+  of a home that requires a sign-in provider (the current `main`; no tagged
+  release has them yet), and a token with the Read right (and Write to mark
+  tasks done and report problems) bound to the home to show.
+- A home that requires signing in through a sign-in provider (single sign-on)
+  can be added with a token created while signed in through that provider: see
+  [A home that requires a sign-in provider](#a-home-that-requires-a-sign-in-provider).
 
 ## Setup
 
@@ -57,6 +60,24 @@ asking for a new one; the new token must be bound to the same home, with the
 Read right and, to mark tasks done, the Write right (the dialog says so again if
 the new token has no Write right).
 
+### A home that requires a sign-in provider
+
+In Housecairn an owner can require that a home be opened only by people signed in
+through a given sign-in provider. A token opens such a home only if it was created
+in a session signed in through that provider:
+
+1. In Housecairn, open **More, Me, API tokens, Create a token**.
+2. If you signed in with a password or a passkey, the home is listed but cannot be
+   ticked: use **Continue with** and the name of the provider next to it. You sign
+   in through the provider and come back to the form.
+3. Tick the home, the rights and the lifetime, and create the token.
+
+The token remembers the provider and opens the home as long as the home requires
+that provider, or no provider at all. If the token was created otherwise, or if an
+owner later requires another provider, Housecairn refuses it (`sso_required`):
+Home Assistant then asks for a new token and says why, and the steps above give
+one.
+
 ## What you get
 
 One device per home, with these sensors:
@@ -78,29 +99,93 @@ today or due in the next 14 days, oldest first, each with its date and, when the
 task has one, its room as the description. Why 14 days: far enough to plan a
 week or a weekend, near enough that a yearly task due next autumn does not sit in
 the list all year. A task that Housecairn hides until a few days before its date
-(its own setting) stays hidden in the list too, as in Housecairn. Tasks without a
-date are not listed.
+(its own setting) stays hidden in the list too, as in Housecairn. The open tasks
+**without a date** come after them, with no date.
+
+Below, checked, come the tasks **marked done in the last seven days** (today and
+the six days before), the latest first. Skipped tasks are not among them.
 
 Checking an item marks the task **done** in Housecairn (today's date, no cost or
 note), and Housecairn creates the next occurrence of a repeating task by itself.
-The list is read again right away, without waiting for the next five minutes.
-It needs a token with the Write right; without it the list is read-only (Home
-Assistant shows no check box).
+**Unchecking** a task done in the last seven days takes that "Done" back
+(Housecairn's undo): the task is open again, and the next occurrence of a
+repeating task is removed. Housecairn refuses it when that next occurrence has
+been changed since (moved, noted or done); Home Assistant then says so. The list
+is read again right away in both cases, without waiting for the next five
+minutes. Both need a token with the Write right; without it the list is
+read-only (Home Assistant shows no check box).
+
+A repeating task done lately is listed twice under the same title: its next
+occurrence (open) and the one just done (checked). Calling `todo.update_item` with
+the title takes the first, the open one, and fails when asked to uncheck it: use
+the `uid` of the item (the automation and the Home Assistant interface already do).
 
 Nothing else is offered from Home Assistant: no new task, no rename, no new date,
-no deletion. Housecairn creates a task without a date (which this list does not
-show) and deletes a task with all of its occurrences, which is not what deleting
-a line of a to-do list means. Plan and change tasks in Housecairn.
+no deletion. Housecairn deletes a task with all of its occurrences, which is not
+what deleting a line of a to-do list means. Plan and change tasks in Housecairn.
 
 If somebody closed the task in Housecairn meanwhile, or removed it, Home
 Assistant says so ("already marked done or skipped in Housecairn") and the list
 is refreshed.
 
+### Action: report a problem
+
+`housecairn.report` creates a report in Housecairn, as if the person who owns
+the token had used the Report screen. It needs a token with the Write right;
+without it the action fails and says so.
+
+| Field | |
+| --- | --- |
+| `config_entry_id` | The home (its entry in Home Assistant). Required. |
+| `title` | What is wrong, 200 characters at most. Required. |
+| `room`, `item`, `article` | The identifier in Housecairn of a room, an item or a stock item, to say where. At most one. Optional. |
+
+It never makes a duplicate. When a report of the same person that is not closed
+yet (still open, or made into a task) has the same title, whatever the case, and
+the same place, nothing is created. The response tells which:
+
+```yaml
+report_id: 3f2b0c7e-1d2a-4c5b-9e8f-0a1b2c3d4e5f
+created: false   # true when the report was created now
+status: open     # or task
+```
+
+Example: the battery of a smoke detector has been low for an hour.
+
+```yaml
+automation:
+  - alias: "Smoke detector battery low"
+    triggers:
+      - trigger: numeric_state
+        entity_id: sensor.hallway_smoke_detector_battery
+        below: 20
+        for: "01:00:00"
+    actions:
+      - action: housecairn.report
+        data:
+          config_entry_id: 0123456789abcdef0123456789abcdef
+          title: "Smoke detector battery low"
+          # The identifier of the detector in Housecairn, if it is an item there.
+          item: 3f2b0c7e-1d2a-4c5b-9e8f-0a1b2c3d4e5f
+        response_variable: report
+      - action: persistent_notification.create
+        data:
+          message: >-
+            {{ 'Reported in Housecairn' if report.created
+               else 'Already reported in Housecairn' }}
+```
+
+The automation editor offers the home in a list. Housecairn counts at most twenty
+waiting reports per person and per home, and refuses more until some are dealt with.
+
 ### Requests
 
-The integration reads Housecairn every five minutes, with three requests; the
-to-do list uses the same two task lists as the sensors. The rooms are read once,
-and again only when a listed task is in a room not seen yet. At setup it also
+The integration reads Housecairn every five minutes, with five requests: the two
+task lists and the stock list of the sensors (the to-do list uses the same two
+task lists), the tasks without a date (`due=none`), and the tasks done in the
+last seven days. The rooms are read once, and again only when a listed task is
+in a room not seen yet. The action reads the reports of the person that are not
+closed (two requests), then creates one if needed. At setup it also
 sends one harmless request to find out whether the token has the Write right
 (an undo of a task that does not exist: Housecairn refuses it without changing
 anything). The sensors and the list become unavailable while Housecairn cannot

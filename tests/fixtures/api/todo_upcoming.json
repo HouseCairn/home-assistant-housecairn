@@ -5,8 +5,8 @@
     "previous": null,
     "results": [
       {
-        "id": "5d0ba372-52c6-454b-a1f0-309de03d53a9",
-        "task": "a5c67430-6358-49b7-a05f-8648c778402d",
+        "id": "d0a31b9b-1333-4f2c-a0d7-abc22f19ca17",
+        "task": "ecb855b0-5eef-4e61-baf0-862b3d679e33",
         "task_title": "Change the ventilation filter",
         "room": null,
         "item": null,
@@ -22,14 +22,14 @@
         "completion_note": "",
         "is_overdue": false,
         "stock": [],
-        "created_at": "2026-11-10T10:59:21.890056Z",
-        "updated_at": "2026-11-10T10:59:21.890078Z"
+        "created_at": "2026-11-11T01:30:07.939332Z",
+        "updated_at": "2026-11-11T01:30:07.939362Z"
       },
       {
-        "id": "4a3d1a74-1249-4025-82c4-fbb4fd874ef9",
-        "task": "79e773e0-72b6-4893-b5fd-f87144ff7522",
+        "id": "a16c2a47-608f-47a4-9884-1c125d1c136a",
+        "task": "bfdee784-9b85-48d6-a1ef-a5a21f80face",
         "task_title": "Descale the kettle",
-        "room": "60d30404-5cdb-4cfd-9818-ce18317293a9",
+        "room": "e941c67e-27f5-480d-8f76-08a7e6f5ae1b",
         "item": null,
         "status": "planned",
         "due_on": "2026-11-09",
@@ -43,14 +43,14 @@
         "completion_note": "",
         "is_overdue": false,
         "stock": [],
-        "created_at": "2026-11-10T10:59:21.895917Z",
-        "updated_at": "2026-11-10T10:59:21.895938Z"
+        "created_at": "2026-11-11T01:30:07.958729Z",
+        "updated_at": "2026-11-11T01:30:07.958760Z"
       },
       {
-        "id": "b26ad6c9-4de9-4af3-bf18-04029e9b38e5",
-        "task": "bc05a7a6-28ef-45a6-aa8b-abc94c499177",
+        "id": "3a29355e-6942-4b0d-a347-b68bf33529e3",
+        "task": "5228c465-7a6e-4df4-a72c-a552a21d1f34",
         "task_title": "Service the garage door",
-        "room": "1f00c8db-f4d6-4b2d-97b3-7d9720c894c7",
+        "room": "d5572653-0f6a-453b-803f-99a421d6d6a7",
         "item": null,
         "status": "planned",
         "due_on": "2026-11-14",
@@ -64,12 +64,12 @@
         "completion_note": "",
         "is_overdue": false,
         "stock": [],
-        "created_at": "2026-11-10T10:59:21.901728Z",
-        "updated_at": "2026-11-10T10:59:21.901748Z"
+        "created_at": "2026-11-11T01:30:08.050267Z",
+        "updated_at": "2026-11-11T01:30:08.050296Z"
       },
       {
-        "id": "e9e51b3f-f2fb-4100-b97c-d56c7191aa86",
-        "task": "546de029-d22b-41e3-b92a-0784ab0907d7",
+        "id": "dc18f7ec-2543-4457-b6c9-365d21f5ac13",
+        "task": "fb3fbba5-7308-47f8-af56-5b08aaec256e",
         "task_title": "Bleed the radiators",
         "room": null,
         "item": null,
@@ -85,12 +85,33 @@
         "completion_note": "",
         "is_overdue": false,
         "stock": [],
-        "created_at": "2026-11-10T10:59:21.921724Z",
-        "updated_at": "2026-11-10T10:59:21.921744Z"
+        "created_at": "2026-11-11T01:30:08.344825Z",
+        "updated_at": "2026-11-11T01:30:08.344867Z"
       },
       {
-        "id": "835c5517-488a-42ed-ab1d-66177f60c6c0",
-        "task": "ae11df74-c65c-4fe1-82e3-6208eb206248",
+        "id": "284ed1e2-a259-4ede-986b-67a84292c12c",
+        "task": "ea905edf-985e-45aa-94c2-3e3cce0c5462",
+        "task_title": "Check the water softener",
+        "room": null,
+        "item": null,
+        "status": "planned",
+        "due_on": "2026-12-08",
+        "visible_from": null,
+        "postponed_from": null,
+        "completed_on": null,
+        "completed_by": null,
+        "completed_by_name": "",
+        "assignee_name": "",
+        "actual_cost": null,
+        "completion_note": "",
+        "is_overdue": false,
+        "stock": [],
+        "created_at": "2026-11-11T01:30:09.059628Z",
+        "updated_at": "2026-11-11T01:30:09.059674Z"
+      },
+      {
+        "id": "e6ab14d1-8bd5-47b0-9a5f-3bff63c8fcc8",
+        "task": "fd377cbc-7b6b-4f88-8e45-d8327094d3cb",
         "task_title": "Clean the gutters",
         "room": null,
         "item": null,
@@ -106,8 +127,8 @@
         "completion_note": "",
         "is_overdue": false,
         "stock": [],
-        "created_at": "2026-11-10T10:59:21.909644Z",
-        "updated_at": "2026-11-10T10:59:21.909681Z"
+        "created_at": "2026-11-11T01:30:08.141707Z",
+        "updated_at": "2026-11-11T01:30:08.141748Z"
       }
     ]
   }

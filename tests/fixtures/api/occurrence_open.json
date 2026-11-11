@@ -1,0 +1,24 @@
+{
+  "status": 200,
+  "body": {
+    "id": "770c56eb-8c0b-4652-88aa-8d6add45775b",
+    "task": "8863b312-73a3-4187-898c-f4403b1d8fa9",
+    "task_title": "Clean the oven",
+    "room": "e941c67e-27f5-480d-8f76-08a7e6f5ae1b",
+    "item": null,
+    "status": "planned",
+    "due_on": "2026-11-05",
+    "visible_from": null,
+    "postponed_from": null,
+    "completed_on": null,
+    "completed_by": null,
+    "completed_by_name": "",
+    "assignee_name": "",
+    "actual_cost": null,
+    "completion_note": "",
+    "is_overdue": true,
+    "stock": [],
+    "created_at": "2026-11-11T01:30:08.438525Z",
+    "updated_at": "2026-11-11T01:30:29.965731Z"
+  }
+}

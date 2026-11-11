@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import datetime
 import logging
 from dataclasses import dataclass
@@ -23,7 +24,7 @@ from .api import (
     HouseCairnScopeError,
     Occurrence,
 )
-from .const import CONF_HOME_ID, DOMAIN, TODO_HORIZON, UPDATE_INTERVAL
+from .const import CONF_HOME_ID, DOMAIN, RECENTLY_DONE, TODO_HORIZON, UPDATE_INTERVAL
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -42,18 +43,22 @@ class HouseCairnData:
     next_due: Occurrence | None
     low_stock: list[Article]
     low_stock_complete: bool
-    # What the to-do list shows: overdue first, then by date (see TODO_HORIZON).
+    # What the to-do list shows: overdue first, then by date (see TODO_HORIZON), then the
+    # tasks without a date.
     todo: list[Occurrence]
+    # The tasks marked done in the last days (see RECENTLY_DONE), the latest first.
+    done: list[Occurrence]
     todo_complete: bool
     # Room names by id, for the description of a to-do item.
     rooms: dict[str, str]
 
 
 class HouseCairnCoordinator(DataUpdateCoordinator[HouseCairnData]):
-    """Three requests per update: the API has no summary endpoint (see docs/plan.md).
+    """Five requests per update: the API has no summary endpoint (see docs/plan.md).
 
-    The to-do list is made from the same two lists as the sensors. The rooms are read
-    again only when a listed task is in a room that is not known yet.
+    The to-do list is made from the same two lists as the sensors, plus the tasks
+    without a date and the tasks done in the last days. The rooms are read again only
+    when a listed task is in a room that is not known yet.
     """
 
     config_entry: HouseCairnConfigEntry
@@ -72,7 +77,13 @@ class HouseCairnCoordinator(DataUpdateCoordinator[HouseCairnData]):
         self.home_id: str = entry.data[CONF_HOME_ID]
         # Whether the token can mark a task done; probed at setup (see async_probe_write).
         self.can_write = False
+        # Set when Housecairn answered 403 `sso_required`: the reauthentication dialog then
+        # says that the new token must be created while signed in through the provider.
+        self.provider_missing = False
         self._rooms: dict[str, str] = {}
+        # One report at a time per home, so that two automations firing together cannot
+        # both find no report and both create one.
+        self.report_lock = asyncio.Lock()
 
     async def async_probe_write(self) -> None:
         """Find out whether the token has the `write` scope; nothing is changed."""
@@ -97,8 +108,10 @@ class HouseCairnCoordinator(DataUpdateCoordinator[HouseCairnData]):
             overdue = await self.client.overdue(self.home_id)
             upcoming = await self.client.open_from(self.home_id, day, horizon)
             low = await self.client.low_stock(self.home_id)
-            todo = _todo_rows(overdue.items, upcoming.items, day, horizon)
-            await self._read_rooms(todo)
+            undated = await self.client.undated(self.home_id)
+            done = await self.client.done_since(self.home_id, day - RECENTLY_DONE + _ONE_DAY)
+            todo = _todo_rows(overdue.items, upcoming.items, undated.items, day, horizon)
+            await self._read_rooms([*todo, *done.items])
         except (HouseCairnAuthError, HouseCairnScopeError, HouseCairnNotFoundError) as exc:
             # A revoked or expired token, or one no longer bound to this home: only a
             # new token helps.
@@ -106,7 +119,13 @@ class HouseCairnCoordinator(DataUpdateCoordinator[HouseCairnData]):
                 translation_domain=DOMAIN, translation_key="auth_failed"
             ) from exc
         except HouseCairnHomeLockedError as exc:
-            raise UpdateFailed(translation_domain=DOMAIN, translation_key="home_locked") from exc
+            # The home requires a sign-in provider that this token does not carry: it was
+            # created outside a session of that provider, or the provider changed since.
+            # Only a new token, created while signed in through the provider, helps.
+            self.provider_missing = True
+            raise ConfigEntryAuthFailed(
+                translation_domain=DOMAIN, translation_key="sso_required"
+            ) from exc
         except HouseCairnConnectionError as exc:
             raise UpdateFailed(translation_domain=DOMAIN, translation_key="cannot_connect") from exc
         except HouseCairnError as exc:
@@ -117,6 +136,7 @@ class HouseCairnCoordinator(DataUpdateCoordinator[HouseCairnData]):
             ) from exc
 
         today = [row for row in upcoming.items if row.due_on == day]
+        listed = {row.id for row in todo}
         return HouseCairnData(
             day=day,
             overdue=overdue.items,
@@ -127,7 +147,12 @@ class HouseCairnCoordinator(DataUpdateCoordinator[HouseCairnData]):
             low_stock=low.items,
             low_stock_complete=low.complete,
             todo=todo,
-            todo_complete=overdue.complete and upcoming.complete,
+            # A list read a moment after another may hold a row that just changed: once.
+            done=[row for row in done.items if row.id not in listed],
+            todo_complete=overdue.complete
+            and upcoming.complete
+            and undated.complete
+            and done.complete,
             rooms=dict(self._rooms),
         )
 
@@ -139,13 +164,18 @@ class HouseCairnCoordinator(DataUpdateCoordinator[HouseCairnData]):
         self._rooms = {room.id: room.name for room in rooms.items}
 
 
+_ONE_DAY = datetime.timedelta(days=1)
+
+
 def _todo_rows(
     overdue: list[Occurrence],
     upcoming: list[Occurrence],
+    undated: list[Occurrence],
     day: datetime.date,
     horizon: datetime.date,
 ) -> list[Occurrence]:
-    """Overdue rows, then the visible rows due up to `horizon`, by date, each once.
+    """Overdue rows, then the visible rows due up to `horizon`, by date, then the rows
+    without a date in the order of Housecairn; each once.
 
     Housecairn hides an occurrence until a few days before its date (the task decides);
     the list follows it, so a row whose `visible_from` is still ahead is left out. The
@@ -159,4 +189,6 @@ def _todo_rows(
         if row.visible_from is not None and row.visible_from > day:
             continue
         rows.setdefault(row.id, row)
-    return sorted(rows.values(), key=lambda row: row.due_on or datetime.date.max)
+    dated = sorted(rows.values(), key=lambda row: row.due_on or datetime.date.max)
+    seen = {row.id for row in dated}
+    return dated + [row for row in undated if row.id not in seen]

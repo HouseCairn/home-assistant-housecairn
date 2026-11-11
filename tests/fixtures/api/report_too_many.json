@@ -1,0 +1,8 @@
+{
+  "status": 400,
+  "body": {
+    "detail": [
+      "You already have 20 reports waiting: they must be dealt with first."
+    ]
+  }
+}

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+import pathlib
 import ssl
 from collections.abc import Callable
 from typing import Any
@@ -22,6 +24,7 @@ from .conftest import API, HOME_ID, NEW_TOKEN, PROBE, TOKEN, URL, load
 
 USER_INPUT = {CONF_URL: URL, CONF_API_TOKEN: TOKEN, CONF_VERIFY_SSL: True}
 OTHER_HOME = "0b9f6c55-2f4e-4d8a-9a43-6e1f0d6c2a11"
+STRINGS = pathlib.Path(__file__).parents[1] / "custom_components" / "housecairn" / "strings.json"
 
 
 async def _start(hass: HomeAssistant) -> dict[str, Any]:
@@ -392,3 +395,89 @@ async def test_reauth_with_a_read_only_token_says_so_then_saves_it(
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
     assert mock_entry.data[CONF_API_TOKEN] == NEW_TOKEN
+
+
+# ---------- a home that requires a sign-in provider ----------
+
+
+def _through_the_provider(name: str) -> dict[str, Any]:
+    """An answer captured with a token created through the provider, for HOME_ID."""
+    body: dict[str, Any] = load(name)["body"]
+    if "results" in body:
+        return {**body, "results": [{**row, "id": HOME_ID} for row in body["results"]]}
+    return {**body, "id": HOME_ID}
+
+
+@pytest.mark.usefixtures("no_token_in_logs")
+async def test_a_token_created_through_the_provider_adds_the_home(
+    hass: HomeAssistant, answer: Callable[..., None], aioclient_mock: AiohttpClientMocker
+) -> None:
+    """The home requires a provider, and the token carries it: `locked` is false."""
+    homes = _through_the_provider("sso_token_homes")
+    assert homes["results"][0]["required_provider"]
+    assert homes["results"][0]["locked"] is False
+    aioclient_mock.get(f"{API}/homes/", json=homes)
+    result = await _start(hass)
+
+    result = await _submit(hass, result["flow_id"], USER_INPUT)
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["data"][CONF_HOME_ID] == HOME_ID
+
+
+async def test_a_token_created_without_the_provider_says_how_to_make_one(
+    hass: HomeAssistant, answer: Callable[..., None]
+) -> None:
+    answer("/homes/", "homes_locked")
+    result = await _start(hass)
+
+    result = await _submit(hass, result["flow_id"], USER_INPUT)
+
+    assert result["errors"] == {"base": "home_locked"}
+    strings = json.loads(STRINGS.read_text())
+    message = strings["config"]["error"]["home_locked"]
+    assert "Continue with" in message
+    assert "cannot open" not in message
+
+
+@pytest.mark.usefixtures("no_token_in_logs")
+@pytest.mark.parametrize("name", ["occurrences_locked", "sso_provider_changed"])
+async def test_reauth_after_sso_required_says_why_and_takes_a_token_made_through_it(
+    hass: HomeAssistant,
+    answer: Callable[..., None],
+    aioclient_mock: AiohttpClientMocker,
+    setup_entry: Callable[[], Any],
+    name: str,
+) -> None:
+    answer(f"/homes/{HOME_ID}/occurrences/", name)
+    entry = await setup_entry()
+    flow = hass.config_entries.flow.async_progress()[0]
+    assert flow["step_id"] == "reauth_sso"
+    form = await hass.config_entries.flow.async_configure(flow["flow_id"])
+    assert form["description_placeholders"]["home"] == "Main house"
+
+    # A token still made outside a session of the provider: refused, and said why.
+    aioclient_mock.clear_requests()
+    answer(f"/homes/{HOME_ID}/", "sso_required_home")
+    result = await _submit(hass, flow["flow_id"], {CONF_API_TOKEN: NEW_TOKEN})
+    assert result["step_id"] == "reauth_sso"
+    assert result["errors"] == {"base": "home_locked"}
+
+    # A token created while signed in through the provider: saved.
+    aioclient_mock.clear_requests()
+    aioclient_mock.get(f"{API}/homes/{HOME_ID}/", json=_through_the_provider("sso_token_home"))
+    answer(PROBE, "write_probe_not_found", method="post")
+    result = await _submit(hass, flow["flow_id"], {CONF_API_TOKEN: NEW_TOKEN})
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "reauth_successful"
+    assert entry.data[CONF_API_TOKEN] == NEW_TOKEN
+
+
+async def test_the_dialog_after_sso_required_explains_the_token_to_create() -> None:
+    for path in (STRINGS, STRINGS.parent / "translations" / "fr.json"):
+        step = json.loads(path.read_text())["config"]["step"]["reauth_sso"]
+        assert "{home}" in step["description"]
+    english = json.loads(STRINGS.read_text())["config"]["step"]["reauth_sso"]["description"]
+    assert "Continue with" in english
+    assert "changed the provider" in english

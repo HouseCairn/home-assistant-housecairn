@@ -20,7 +20,7 @@ from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClien
 from custom_components.housecairn.const import DOMAIN, UPDATE_INTERVAL
 from custom_components.housecairn.diagnostics import async_get_config_entry_diagnostics
 
-from .conftest import API, DAY, HOME_ID, PROBE, TOKEN, URL, load
+from .conftest import API, DAY, HOME_ID, PROBE, TOKEN, URL, empty_lists, load
 
 OVERDUE = "sensor.main_house_overdue_tasks"
 TODAY = "sensor.main_house_tasks_due_today"
@@ -63,9 +63,10 @@ async def test_sensors(
         {"name": "AA batteries", "quantity": 0.0, "threshold": 4.0, "unit": "piece"},
         {"name": "Ventilation filter G4", "quantity": 1.0, "threshold": 2.0, "unit": "piece"},
     ]
-    # The probe of the write scope at setup, then three requests per update, all with
+    # The probe of the write scope at setup, then five requests per update (the three
+    # lists of the sensors, the tasks without a date, the tasks done lately), all with
     # the token in the header only.
-    assert aioclient_mock.call_count == 4
+    assert aioclient_mock.call_count == 6
     assert [method for method, *_ in aioclient_mock.mock_calls].count("POST") == 1
     for _method, url, _data, headers in aioclient_mock.mock_calls:
         assert url.host == "housecairn.example.com"
@@ -106,6 +107,7 @@ async def test_nothing_due(
     empty = {"next": None, "previous": None, "results": []}
     aioclient_mock.get(OCCURRENCES, json=empty)
     aioclient_mock.get(f"{API}/homes/{HOME_ID}/articles/", json=empty)
+    empty_lists(aioclient_mock)
 
     await setup_entry()
 
@@ -130,6 +132,7 @@ async def test_api_error_makes_entities_unavailable_until_it_recovers(
         {"status": "open", "due_after": DAY},
     )
     answer(f"/homes/{HOME_ID}/articles/", "articles_low", {"low": "true"})
+    empty_lists(aioclient_mock)
     entry = await setup_entry()
     assert hass.states.get(OVERDUE).state == "2"  # type: ignore[union-attr]
 
@@ -151,6 +154,7 @@ async def test_api_error_makes_entities_unavailable_until_it_recovers(
         {"status": "open", "due_after": DAY},
     )
     answer(f"/homes/{HOME_ID}/articles/", "articles_low", {"low": "true"})
+    empty_lists(aioclient_mock)
     freezer.tick(UPDATE_INTERVAL + timedelta(seconds=1))
     async_fire_time_changed(hass)
     await hass.async_block_till_done()
@@ -199,15 +203,30 @@ async def test_refused_token_starts_reauth(
     assert flows[0]["context"]["entry_id"] == entry.entry_id
 
 
-async def test_locked_home_is_retried_not_reauthenticated(
-    hass: HomeAssistant, answer: Callable[..., None], setup_entry: Callable[[], Any]
+@pytest.mark.usefixtures("no_token_in_logs")
+@pytest.mark.parametrize(
+    "name",
+    [
+        # A token created in a session that was not signed in through the provider.
+        "occurrences_locked",
+        # A token created through the provider, whose home now requires another one.
+        "sso_provider_changed",
+    ],
+)
+async def test_a_home_the_token_cannot_open_asks_for_a_new_token_and_says_why(
+    hass: HomeAssistant, answer: Callable[..., None], setup_entry: Callable[[], Any], name: str
 ) -> None:
-    answer(f"/homes/{HOME_ID}/occurrences/", "occurrences_locked")
+    """403 `sso_required`: only a token created while signed in through the provider helps."""
+    answer(f"/homes/{HOME_ID}/occurrences/", name)
 
     entry = await setup_entry()
 
-    assert entry.state is ConfigEntryState.SETUP_RETRY
-    assert hass.config_entries.flow.async_progress() == []
+    assert entry.state is ConfigEntryState.SETUP_ERROR
+    flows = hass.config_entries.flow.async_progress()
+    assert [(f["handler"], f["context"]["source"], f["step_id"]) for f in flows] == [
+        (DOMAIN, SOURCE_REAUTH, "reauth_sso")
+    ]
+    assert flows[0]["context"]["entry_id"] == entry.entry_id
 
 
 async def test_long_lists_follow_the_cursor_on_the_configured_host_only(
@@ -237,6 +256,7 @@ async def test_long_lists_follow_the_cursor_on_the_configured_host_only(
         json={**upcoming, "results": [*upcoming["results"], later]},
     )
     answer(f"/homes/{HOME_ID}/articles/", "articles_low", {"low": "true"})
+    empty_lists(aioclient_mock)
 
     await setup_entry()
 
@@ -244,8 +264,9 @@ async def test_long_lists_follow_the_cursor_on_the_configured_host_only(
     assert hass.states.get(TODAY).state == "1"  # type: ignore[union-attr]
     hosts = {url.host for _m, url, _d, _h in aioclient_mock.mock_calls}
     assert hosts == {"housecairn.example.com"}
-    # The probe, two pages of overdue tasks, one of upcoming ones, the stock.
-    assert aioclient_mock.call_count == 5
+    # The probe, two pages of overdue tasks, one of upcoming ones, the stock, the tasks
+    # without a date and the tasks done lately.
+    assert aioclient_mock.call_count == 7
 
 
 async def test_tasks_of_the_day_read_the_next_page_while_it_is_still_today(
@@ -264,6 +285,7 @@ async def test_tasks_of_the_day_read_the_next_page_while_it_is_still_today(
     )
     aioclient_mock.get(OCCURRENCES, params={"status": "open", "due_after": DAY}, json=page1)
     answer(f"/homes/{HOME_ID}/articles/", "articles_low", {"low": "true"})
+    empty_lists(aioclient_mock)
 
     await setup_entry()
 
@@ -302,6 +324,7 @@ async def test_diagnostics_redact_the_token_and_the_content(
         "low_stock": 2,
         "low_stock_complete": True,
         "todo": 5,
+        "done": 0,
         "todo_complete": True,
     }
     assert diagnostics["can_write"] is True
@@ -323,6 +346,7 @@ async def test_setup_retries_when_the_write_probe_cannot_be_answered(
     ):
         aioclient_mock.get(OCCURRENCES, params=params, json=load(name)["body"])
     aioclient_mock.get(f"{API}/homes/{HOME_ID}/articles/", json=load("articles_low")["body"])
+    empty_lists(aioclient_mock)
 
     entry = await setup_entry()
 
@@ -347,6 +371,7 @@ async def test_an_unexpected_write_probe_never_blocks_the_reads(
     ):
         aioclient_mock.get(OCCURRENCES, params=params, json=load(name)["body"])
     aioclient_mock.get(f"{API}/homes/{HOME_ID}/articles/", json=load("articles_low")["body"])
+    empty_lists(aioclient_mock)
     aioclient_mock.get(f"{API}/homes/{HOME_ID}/rooms/", json=load("rooms")["body"])
 
     entry = await setup_entry()
@@ -381,6 +406,7 @@ async def test_setup_starts_reauth_when_the_write_probe_is_refused(
     ):
         aioclient_mock.get(OCCURRENCES, params=params, json=load(name)["body"])
     aioclient_mock.get(f"{API}/homes/{HOME_ID}/articles/", json=load("articles_low")["body"])
+    empty_lists(aioclient_mock)
 
     entry = await setup_entry()
 

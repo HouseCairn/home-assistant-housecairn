@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Connect to Housecairn",
-        "description": "Create an API token in Housecairn (More, Me, API tokens), bound to the home to show. Give it the Read right to see the tasks, and Read and Write to also mark them Done from Home Assistant. Home Assistant calls Housecairn with this token; Housecairn never receives a Home Assistant token.",
+        "description": "Create an API token in Housecairn (More, Me, API tokens), bound to the home to show. Give it the Read right to see the tasks, and Read and Write to also mark them Done and report problems from Home Assistant. Home Assistant calls Housecairn with this token; Housecairn never receives a Home Assistant token.",
         "data": {
           "url": "Address of Housecairn",
           "api_token": "Housecairn API token",
@@ -29,9 +29,16 @@
           "api_token": "Housecairn API token"
         }
       },
+      "reauth_sso": {
+        "title": "New token for {home}",
+        "description": "{home} requires signing in through a sign-in provider, and the saved token does not carry it: it was created in a session that was not signed in through that provider, or an owner changed the provider the home requires. In Housecairn, open More, Me, API tokens, Create a token: next to this home, use Continue with and the name of the provider, then tick the home. Give the new token the Read right, and the Write right to mark tasks Done.",
+        "data": {
+          "api_token": "Housecairn API token"
+        }
+      },
       "read_only": {
         "title": "Read-only token",
-        "description": "This token can read {home} but cannot change it: the to-do list is shown but tasks cannot be marked Done from Home Assistant. To allow it, create a token with the Read and Write rights in Housecairn (More, Me, API tokens) and set up the integration again. Continue to add the home read-only."
+        "description": "This token can read {home} but cannot change it: the to-do list is shown but tasks cannot be marked Done from Home Assistant, and the Report action is refused. To allow it, create a token with the Read and Write rights in Housecairn (More, Me, API tokens) and set up the integration again. Continue to add the home read-only."
       },
       "reauth_read_only": {
         "title": "Read-only token",
@@ -45,7 +52,7 @@
       "invalid_auth": "Housecairn refused the token: it is invalid, expired or revoked.",
       "insufficient_scope": "The token does not have the Read right.",
       "no_homes": "The token is not bound to any home.",
-      "home_locked": "This home requires signing in through a sign-in provider; an API token cannot open it.",
+      "home_locked": "This home requires signing in through a sign-in provider, and the token was not created in a session signed in through it. In Housecairn, use Continue with next to the home on the New API token screen, then create the token.",
       "wrong_home": "The token is not bound to this home.",
       "unknown": "Unexpected answer from Housecairn."
     },
@@ -81,7 +88,7 @@
       "message": "Housecairn refused the token."
     },
     "home_locked": {
-      "message": "This home requires signing in through a sign-in provider; an API token cannot open it."
+      "message": "This home requires signing in through a sign-in provider that the token does not carry."
     },
     "cannot_connect": {
       "message": "Housecairn could not be reached."
@@ -102,7 +109,50 @@
       "message": "The Housecairn token does not have the Write right: tasks cannot be marked Done. Create a token with the Read and Write rights and set up the integration again."
     },
     "only_done": {
-      "message": "Housecairn lists can only mark a task done from Home Assistant; change anything else in Housecairn."
+      "message": "Housecairn lists can only mark a task done, or take back a Done, from Home Assistant; change anything else in Housecairn."
+    },
+    "sso_required": {
+      "message": "This home requires signing in through a sign-in provider that the token does not carry (it was created outside a session of that provider, or the provider changed). Home Assistant asks for a new token."
+    },
+    "already_reopened": {
+      "message": "{task} is not marked done in Housecairn any more. The list has been refreshed."
+    },
+    "undo_refused": {
+      "message": "Housecairn refused to take back the Done of {task}: the next time this task is due has been changed since. Change it in Housecairn. The list has been refreshed."
+    },
+    "report_needs_write": {
+      "message": "The Housecairn token of {home} does not have the Write right: it cannot report a problem. Create a token with the Read and Write rights and enter it in the integration."
+    },
+    "report_refused": {
+      "message": "Housecairn refused the report: {error}"
+    }
+  },
+  "services": {
+    "report": {
+      "name": "Report a problem",
+      "description": "Reports a problem in a home of Housecairn, as the person who owns the token. Nothing is created when a report of that person with the same title and the same place is not closed yet. Needs a token with the Write right.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Home",
+          "description": "The Housecairn home to report the problem in."
+        },
+        "title": {
+          "name": "Title",
+          "description": "What is wrong, in 200 characters at most."
+        },
+        "room": {
+          "name": "Room",
+          "description": "Identifier of a room of the home, to say where. At most one of room, item and stock item."
+        },
+        "item": {
+          "name": "Item",
+          "description": "Identifier of an item of the home, to say where."
+        },
+        "article": {
+          "name": "Stock item",
+          "description": "Identifier of a stock item of the home, to say which."
+        }
+      }
     }
   }
 }

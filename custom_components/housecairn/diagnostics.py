@@ -44,6 +44,7 @@ async def async_get_config_entry_diagnostics(
             "low_stock": len(data.low_stock),
             "low_stock_complete": data.low_stock_complete,
             "todo": len(data.todo),
+            "done": len(data.done),
             "todo_complete": data.todo_complete,
         },
     }

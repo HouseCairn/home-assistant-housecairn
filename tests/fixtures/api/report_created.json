@@ -1,0 +1,19 @@
+{
+  "status": 201,
+  "body": {
+    "id": "aa35b691-70bf-4de6-bf77-a330e932e098",
+    "title": "Smoke detector battery low",
+    "status": "open",
+    "place": "Hallway · Smoke detector",
+    "room": null,
+    "item": "4f51cf6f-8837-452c-b04e-3f81344cd9df",
+    "article": null,
+    "task": null,
+    "reporter_name": "alice",
+    "mine": true,
+    "photo_url": null,
+    "thumbnail_url": null,
+    "created_at": "2026-11-11T01:30:36.462757Z",
+    "closed_at": null
+  }
+}

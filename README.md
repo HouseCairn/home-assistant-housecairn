@@ -22,9 +22,14 @@ documentation is at <https://docs.housecairn.app>.
 - **One device per home**, with four sensors: overdue tasks, tasks due today,
   next due date, stock items below their threshold.
 - **A to-do list per home**, named **Tasks**: open tasks overdue, due today or
-  due in the next 14 days, with their date and room.
+  due in the next 14 days, with their date and room, then the open tasks
+  without a date, then the tasks done in the last seven days (checked).
 - **Mark a task done** by checking it: Housecairn records it today and creates
-  the next occurrence of a repeating task.
+  the next occurrence of a repeating task. Unchecking a task done in the last
+  seven days takes the "Done" back.
+- **An action to report a problem**: `housecairn.report` creates a report in
+  Housecairn from an automation, without ever making a duplicate (example in
+  the [guide](docs/guide.md#action-report-a-problem)).
 - **A Housecairn API token, never a Home Assistant token**: limited to the homes
   and rights you choose in Housecairn, revocable there at any time.
 - **Reauthentication** when the token expires or is revoked: Home Assistant asks
@@ -39,10 +44,11 @@ documentation is at <https://docs.housecairn.app>.
    `https://github.com/HouseCairn/home-assistant-housecairn` with the type
    **Integration** (or use the button above).
 2. Install **Housecairn**, then restart Home Assistant.
-3. In Housecairn, open **More** > **Me** > **API tokens** and create a token:
+3. In Housecairn, open **More** > **Me** > **API tokens** > **Create a token**:
    a name (such as "Home Assistant"), the rights **Read** and **Write** (Write
-   is needed to mark tasks done; Read alone gives a read-only list), the
-   **home** to show, and how long it lasts. Copy the token: it is shown once.
+   is needed to mark tasks done, take a "Done" back and report a problem; Read
+   alone gives a read-only list), the **home** to show, and how long it lasts.
+   Copy the token: it is shown once.
 4. In Home Assistant, go to **Settings** > **Devices & services** >
    **Add integration**, pick **Housecairn**, and enter the address of
    Housecairn (such as `https://housecairn.example.com`, with its path if it is
@@ -50,37 +56,46 @@ documentation is at <https://docs.housecairn.app>.
 
 Without HACS, copy `custom_components/housecairn` into the `custom_components`
 folder of your Home Assistant configuration and restart. Details, including a
-token bound to several homes: [Setup](docs/guide.md#setup).
+token bound to several homes and a home that requires a sign-in provider:
+[Setup](docs/guide.md#setup).
 
 ## Requirements
 
 - Home Assistant 2026.10 or later.
 - A Housecairn instance reachable from Home Assistant, recent enough to have the
-  **API tokens** screen (the current `main`; no release has it yet).
+  **API tokens** screen, the filter of the tasks without a date and the tokens
+  of a home that requires a sign-in provider (the current `main`; no release
+  has them yet).
 - With the [Housecairn app](https://github.com/HouseCairn/home-assistant-addons)
   for Home Assistant: an address that reaches it without Home Assistant's
   interface, such as its port; ingress addresses only work in a browser.
 
 ## Known limits
 
-- **Nothing but "Done" from Home Assistant**: no new task, no rename, no new
-  date, no deletion; plan and change tasks in Housecairn.
-- **Tasks without a date** are not in the to-do list, nor tasks due more than
-  14 days ahead.
-- **A home that requires signing in through an identity provider** cannot be
-  added: Housecairn refuses API tokens for it, by design.
-- **Polling every five minutes** (three requests); the list is read again right
-  after a task is marked done.
+- **Nothing but "Done", "Undo" and the report from Home Assistant**: no new
+  task, no rename, no new date, no deletion; plan and change tasks in
+  Housecairn.
+- **Tasks due more than 14 days ahead** are not in the to-do list; tasks done
+  more than seven days ago are not either. Undoing a "Done" is refused when
+  the next occurrence of a repeating task has been changed since.
+- **A home that requires a sign-in provider** needs a token created while signed
+  in through that provider; otherwise Housecairn refuses it
+  ([how](docs/guide.md#a-home-that-requires-a-sign-in-provider)).
+- **A repeating task done lately is listed twice** under the same title (open
+  and checked): an automation must use the `uid` of the item.
+- **Housecairn counts at most twenty waiting reports** per person and per home.
+- **Polling every five minutes** (five requests); the list is read again right
+  after a task is marked done or taken back.
 - **"Today" is the date in Home Assistant's time zone**, while Housecairn decides
   what is overdue in its own: use the same time zone for both.
-- **No calendar and no actions for automations yet**: planned in
+- **No calendar yet, and no other action than `housecairn.report`**: planned in
   [docs/plan.md](docs/plan.md).
 
 ## Project status
 
-**Early development, no version released yet.** The integration is at 0.2.0 in
-its manifest (sensors, then the to-do list with "Done"), without a tagged
-release; Housecairn has no release yet either, and its first version, v0.1.0,
+**Early development, no version released yet.** The integration is at 0.3.0 in
+its manifest (sensors, the to-do list with "Done" and "Undo", tasks without a
+date, the `housecairn.report` action), without a tagged release; Housecairn has no release yet either, and its first version, v0.1.0,
 is planned. Install from the default branch, and expect changes.
 
 ## Privacy and security
