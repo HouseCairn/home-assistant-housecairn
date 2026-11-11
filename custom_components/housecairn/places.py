@@ -157,7 +157,8 @@ class PlaceFinder:
         if room is None or name is None:
             return Place(room=room, room_match=room_match)
 
-        wanted = normalize(name)
+        # Compared as cut for creation, so a long name finds the item it created.
+        wanted = normalize(_cut(name))
         rows = await self._client.room_items(self._home_id, room)
         same = [item for item in rows.items if normalize(item.name) == wanted]
         if len(same) > 1:

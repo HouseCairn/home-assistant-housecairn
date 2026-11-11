@@ -422,6 +422,28 @@ async def test_a_missing_device_is_added_to_the_room_and_remembered(
 
 
 @pytest.mark.usefixtures("no_token_in_logs")
+async def test_a_device_name_over_the_limit_finds_the_item_created_with_it_cut(
+    hass: HomeAssistant,
+    setup_entry: Callable[[], Any],
+    aioclient_mock: AiohttpClientMocker,
+    api: Callable[..., None],
+    boiler: Callable[..., Any],
+    created: list[Any],
+) -> None:
+    long_name = "B" * 130
+    api(items={KITCHEN: [_item(BOILER_ITEM, "B" * 120)]})
+    boiler(entity_area="Kitchen", name=long_name)
+    entry = await setup_entry()
+
+    response = await _report(hass, entry.entry_id, entity_id=ENTITY, create_item=True)
+
+    assert _matches(response) == ("matched", "matched")
+    assert _calls(aioclient_mock, "post", REPORTS) == [{"title": TITLE, "item": BOILER_ITEM}]
+    assert _calls(aioclient_mock, "post", ITEMS) == []
+    assert created == []
+
+
+@pytest.mark.usefixtures("no_token_in_logs")
 async def test_a_device_without_maker_or_model_is_added_with_its_name_only(
     hass: HomeAssistant,
     setup_entry: Callable[[], Any],
