@@ -139,6 +139,11 @@ is read again right away in both cases, without waiting for the next five
 minutes. Both need a token with the Write right; without it the list is
 read-only (Home Assistant shows no check box).
 
+A repeating task done lately is listed twice under the same title: its next
+occurrence (open) and the one just done (checked). Calling `todo.update_item` with
+the title takes the first, the open one, and fails when asked to uncheck it: use
+the `uid` of the item (the automation and the Home Assistant interface already do).
+
 Nothing else is offered from Home Assistant: no new task, no rename, no new date,
 no deletion. Housecairn deletes a task with all of its occurrences, which is not
 what deleting a line of a to-do list means. Plan and change tasks in Housecairn.
@@ -195,7 +200,7 @@ automation:
 ```
 
 The automation editor offers the home in a list. Housecairn counts at most twenty
-reports waiting per person, and refuses more until some are dealt with.
+waiting reports per person and per home, and refuses more until some are dealt with.
 
 ### Requests
 
