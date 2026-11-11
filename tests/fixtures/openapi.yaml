@@ -7608,11 +7608,13 @@ components:
           - string
           - 'null'
           format: date
-        contract_provider:
-          type: string
-          title: 'Maintenance contract: provider'
-          description: 'Who services it. Example: Acme Heating.'
-          maxLength: 200
+        contract_contractor:
+          type:
+          - string
+          - 'null'
+          format: uuid
+          description: The contractor of the home who services it (the provider of
+            its maintenance contract), or null.
         contract_number:
           type: string
           title: 'Maintenance contract: number'
@@ -7689,11 +7691,13 @@ components:
           - string
           - 'null'
           format: date
-        contract_provider:
-          type: string
-          title: 'Maintenance contract: provider'
-          description: 'Who services it. Example: Acme Heating.'
-          maxLength: 200
+        contract_contractor:
+          type:
+          - string
+          - 'null'
+          format: uuid
+          description: The contractor of the home who services it (the provider of
+            its maintenance contract), or null.
         contract_number:
           type: string
           title: 'Maintenance contract: number'
@@ -9013,11 +9017,13 @@ components:
           - string
           - 'null'
           format: date
-        contract_provider:
-          type: string
-          title: 'Maintenance contract: provider'
-          description: 'Who services it. Example: Acme Heating.'
-          maxLength: 200
+        contract_contractor:
+          type:
+          - string
+          - 'null'
+          format: uuid
+          description: The contractor of the home who services it (the provider of
+            its maintenance contract), or null.
         contract_number:
           type: string
           title: 'Maintenance contract: number'
@@ -9203,7 +9209,16 @@ components:
           minimum: 1
           title: Estimated duration (minutes)
         season:
-          title: Preferred season
+          description: |-
+            `spring`, `summer`, `autumn` and `winter` follow the hemisphere of the home; `custom` takes the two months below; empty is any time. `heating`, no longer offered, is still accepted and stored as `custom` with the months of the heating season (October to April in the north, April to October in the south).
+
+            * `` - any time
+            * `spring` - Spring
+            * `summer` - Summer
+            * `autumn` - Autumn
+            * `winter` - Winter
+            * `custom` - Custom months
+            * `heating` - heating (deprecated)
           oneOf:
           - $ref: '#/components/schemas/SeasonEnum'
           - $ref: '#/components/schemas/BlankEnum'
@@ -9615,9 +9630,9 @@ components:
           type:
           - integer
           - 'null'
-          maximum: 43200
+          maximum: 525600
           minimum: 1
-          description: Estimated duration in minutes, from 1 to 43200 (thirty days).
+          description: Estimated duration in minutes, from 1 to 525600 (one year).
             The screens take a number and a unit and store minutes.
         labour_budget:
           type:
@@ -9664,15 +9679,15 @@ components:
           title: Every
         season:
           description: |-
-            `spring`, `summer`, `autumn`, `winter` and `heating` follow the hemisphere of the home and set the two months below; `custom` takes the months given; empty is the whole year. Months given without a season make a custom one.
+            `spring`, `summer`, `autumn` and `winter` follow the hemisphere of the home and set the two months below; `custom` takes the months given; empty is the whole year. Months given without a season make a custom one. `heating`, no longer offered, is still accepted and stored as `custom` with the months of the heating season (October to April in the north, April to October in the south).
 
             * `` - all year
             * `spring` - Spring
             * `summer` - Summer
             * `autumn` - Autumn
             * `winter` - Winter
-            * `heating` - Heating season
             * `custom` - Custom months
+            * `heating` - heating (deprecated)
           oneOf:
           - $ref: '#/components/schemas/SeasonEnum'
           - $ref: '#/components/schemas/BlankEnum'
@@ -9912,7 +9927,16 @@ components:
           minimum: 1
           title: Estimated duration (minutes)
         season:
-          title: Preferred season
+          description: |-
+            `spring`, `summer`, `autumn` and `winter` follow the hemisphere of the home; `custom` takes the two months below; empty is any time. `heating`, no longer offered, is still accepted and stored as `custom` with the months of the heating season (October to April in the north, April to October in the south).
+
+            * `` - any time
+            * `spring` - Spring
+            * `summer` - Summer
+            * `autumn` - Autumn
+            * `winter` - Winter
+            * `custom` - Custom months
+            * `heating` - heating (deprecated)
           oneOf:
           - $ref: '#/components/schemas/SeasonEnum'
           - $ref: '#/components/schemas/BlankEnum'
@@ -10231,7 +10255,16 @@ components:
           minimum: 1
           title: Estimated duration (minutes)
         season:
-          title: Preferred season
+          description: |-
+            `spring`, `summer`, `autumn` and `winter` follow the hemisphere of the home; `custom` takes the two months below; empty is any time. `heating`, no longer offered, is still accepted and stored as `custom` with the months of the heating season (October to April in the north, April to October in the south).
+
+            * `` - any time
+            * `spring` - Spring
+            * `summer` - Summer
+            * `autumn` - Autumn
+            * `winter` - Winter
+            * `custom` - Custom months
+            * `heating` - heating (deprecated)
           oneOf:
           - $ref: '#/components/schemas/SeasonEnum'
           - $ref: '#/components/schemas/BlankEnum'
@@ -10982,16 +11015,17 @@ components:
       - summer
       - autumn
       - winter
-      - heating
       - custom
+      - heating
       type: string
       description: |-
+        * `` - any time
         * `spring` - Spring
         * `summer` - Summer
         * `autumn` - Autumn
         * `winter` - Winter
-        * `heating` - Heating season
         * `custom` - Custom months
+        * `heating` - heating (deprecated)
     Section:
       type: object
       properties:
@@ -11208,9 +11242,9 @@ components:
           type:
           - integer
           - 'null'
-          maximum: 43200
+          maximum: 525600
           minimum: 1
-          description: Estimated duration in minutes, from 1 to 43200 (thirty days).
+          description: Estimated duration in minutes, from 1 to 525600 (one year).
             The screens take a number and a unit and store minutes.
         estimated_text:
           type: string
@@ -11266,15 +11300,15 @@ components:
           title: Every
         season:
           description: |-
-            `spring`, `summer`, `autumn`, `winter` and `heating` follow the hemisphere of the home and set the two months below; `custom` takes the months given; empty is the whole year. Months given without a season make a custom one.
+            `spring`, `summer`, `autumn` and `winter` follow the hemisphere of the home and set the two months below; `custom` takes the months given; empty is the whole year. Months given without a season make a custom one. `heating`, no longer offered, is still accepted and stored as `custom` with the months of the heating season (October to April in the north, April to October in the south).
 
             * `` - all year
             * `spring` - Spring
             * `summer` - Summer
             * `autumn` - Autumn
             * `winter` - Winter
-            * `heating` - Heating season
             * `custom` - Custom months
+            * `heating` - heating (deprecated)
           oneOf:
           - $ref: '#/components/schemas/SeasonEnum'
           - $ref: '#/components/schemas/BlankEnum'
@@ -11432,9 +11466,9 @@ components:
           type:
           - integer
           - 'null'
-          maximum: 43200
+          maximum: 525600
           minimum: 1
-          description: Estimated duration in minutes, from 1 to 43200 (thirty days).
+          description: Estimated duration in minutes, from 1 to 525600 (one year).
             The screens take a number and a unit and store minutes.
         labour_budget:
           type:
@@ -11481,15 +11515,15 @@ components:
           title: Every
         season:
           description: |-
-            `spring`, `summer`, `autumn`, `winter` and `heating` follow the hemisphere of the home and set the two months below; `custom` takes the months given; empty is the whole year. Months given without a season make a custom one.
+            `spring`, `summer`, `autumn` and `winter` follow the hemisphere of the home and set the two months below; `custom` takes the months given; empty is the whole year. Months given without a season make a custom one. `heating`, no longer offered, is still accepted and stored as `custom` with the months of the heating season (October to April in the north, April to October in the south).
 
             * `` - all year
             * `spring` - Spring
             * `summer` - Summer
             * `autumn` - Autumn
             * `winter` - Winter
-            * `heating` - Heating season
             * `custom` - Custom months
+            * `heating` - heating (deprecated)
           oneOf:
           - $ref: '#/components/schemas/SeasonEnum'
           - $ref: '#/components/schemas/BlankEnum'
