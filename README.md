@@ -9,8 +9,13 @@ needs doing in your home from Home Assistant, and mark it done there.
 [![HACS: custom repository](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz/docs/faq/custom_repositories/)
 ![Home Assistant 2026.10 or later](https://img.shields.io/badge/Home%20Assistant-2026.10%2B-41BDF5.svg)
 [![License: AGPL-3.0-only](https://img.shields.io/badge/license-AGPL--3.0--only-blue.svg)](LICENSE)
+![status: alpha](https://img.shields.io/badge/status-alpha-orange.svg)
 
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=HouseCairn&repository=home-assistant-housecairn&category=integration)
+
+> [!WARNING]
+> HouseCairn is alpha software. Expect bugs and breaking changes between versions.
+> Back up your HouseCairn instance before every upgrade, of HouseCairn or of this integration.
 
 No screenshot yet: none has been taken in a real Home Assistant instance.
 
@@ -100,7 +105,7 @@ token bound to several homes and a home that requires a sign-in provider:
 
 ## Project status
 
-**Early development.** 0.1.0 is the first version, a test version: sensors, the
+**Alpha.** 0.1.0 is the first version, a test version: sensors, the
 to-do list with "Done" and "Undo", tasks without a date, the `housecairn.report`
 action. It needs Housecairn 0.1.0 or later. Expect changes from one 0.x version
 to the next; the [changelog](CHANGELOG.md) says what changed.
