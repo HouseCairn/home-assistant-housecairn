@@ -272,6 +272,11 @@ the entity), an area that forces the room, and "Add the device if missing" (on b
 default). They run one report after the other (`mode: queued`), and a report that
 is not closed yet is not made again.
 
+To try an automation made from a blueprint, put the entity in the wanted state
+(**Developer tools > States**, set the state, then wait for the duration), not
+**Run actions**: run by hand, the automation has no entity that triggered it, so
+it stops with the message "Run by hand: nothing is reported" and creates nothing.
+
 ### Requests
 
 The integration reads Housecairn every five minutes, with five requests: the two

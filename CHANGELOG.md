@@ -3,6 +3,15 @@
 The versions of the integration, the newest first. The plan of each lot is in
 [docs/plan.md](docs/plan.md).
 
+## Unreleased
+
+- **The two blueprints no longer fail when the automation is run by hand.**
+  "Run actions" (or `automation.trigger`) gives a `trigger` with no `to_state` and
+  no `entity_id`, and the title template failed with `'dict object' has no
+  attribute 'to_state'`. The automation now stops with "Run by hand: nothing is
+  reported", and reports nothing. The normal trigger is unchanged. To try an
+  automation, put the entity in the wanted state (Developer tools > States).
+
 ## 0.2.0
 
 A feature version: report a problem from the entity that saw it, with the room
