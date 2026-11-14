@@ -8,6 +8,8 @@ blueprint:
     is added to the room when it has no item by that name. Nothing is created
     twice while the report is not closed.
     Needs the Housecairn integration with a token that has the Write right.
+    To try it, put the entity in the wanted state (Developer tools > States):
+    running the actions by hand has no entity to report, so nothing is reported.
   domain: automation
   author: Housecairn
   source_url: https://github.com/HouseCairn/home-assistant-housecairn/blob/main/blueprints/automation/housecairn/report_below_threshold.yaml
@@ -81,6 +83,15 @@ triggers:
     for: !input duration
 
 actions:
+  # "Run actions" by hand (or `automation.trigger`) gives a `trigger` with no
+  # `to_state` and no `entity_id`: there is nothing to report, so stop cleanly.
+  - if:
+      - condition: template
+        value_template: "{{ trigger is not defined or trigger.to_state is not defined }}"
+    then:
+      - stop: >-
+          Run by hand: nothing is reported. To try it, put the entity in the
+          wanted state.
   - action: housecairn.report
     data:
       config_entry_id: !input home

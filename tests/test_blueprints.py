@@ -203,3 +203,43 @@ async def test_a_value_above_or_back_up_in_time_reports_nothing(
     await _later(hass, freezer, 30)
 
     assert calls == []
+
+
+@pytest.mark.usefixtures("blueprint_dir")
+@pytest.mark.parametrize(
+    ("path", "entity", "before", "after", "title"),
+    [
+        (ON_STATE, LEAK, "off", "on", "Problem detected: Boiler fault"),
+        (BELOW, BATTERY, "80", "15", "Low: Boiler fault"),
+    ],
+)
+async def test_running_by_hand_reports_nothing_then_a_real_trigger_reports(
+    hass: HomeAssistant,
+    calls: list[ServiceCall],
+    freezer: Any,
+    caplog: pytest.LogCaptureFixture,
+    path: str,
+    entity: str,
+    before: str,
+    after: str,
+    title: str,
+) -> None:
+    attributes = {"friendly_name": "Boiler fault"}
+    hass.states.async_set(entity, before, attributes)
+    await _automation(hass, path, entities=[entity])
+
+    # "Run actions": the trigger has no to_state and no entity_id. No template error.
+    await hass.services.async_call(
+        "automation", "trigger", {"entity_id": "automation.housecairn_test"}, blocking=True
+    )
+    await hass.async_block_till_done()
+    assert calls == []
+    # Without the guard the title template fails and the run is logged as an error.
+    assert [r.getMessage() for r in caplog.records if r.levelname == "ERROR"] == []
+
+    hass.states.async_set(entity, after, attributes)
+    await hass.async_block_till_done()
+    await _later(hass, freezer, 6)
+    await _later(hass, freezer, 30)
+
+    assert [(call.data["title"], call.data["entity_id"]) for call in calls] == [(title, entity)]
