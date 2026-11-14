@@ -1,0 +1,61 @@
+name: Something does not work
+description: Tell us what went wrong with the Housecairn integration for Home Assistant.
+labels:
+  - bug
+assignees:
+  - Robvred
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for telling us. Short answers are fine.
+        For a security problem, do not use this form: see the security policy and report it privately.
+  - type: textarea
+    id: happened
+    attributes:
+      label: What happened?
+      description: Tell us what you did and what you saw.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+  - type: textarea
+    id: steps
+    attributes:
+      label: How can we see it ourselves?
+      description: The steps, one per line.
+  - type: input
+    id: version
+    attributes:
+      label: "Integration version"
+      description: "Shown in HACS, or on the integration page in Home Assistant. Write \"not sure\" if you do not know."
+    validations:
+      required: true
+  - type: input
+    id: ha
+    attributes:
+      label: "Home Assistant version"
+      description: "For example: 2026.11."
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: "How you installed it"
+      options:
+        - "HACS"
+        - "By hand"
+        - "Not sure"
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshot (optional)
+      description: Drag a picture here. Hide anything private first.
+  - type: textarea
+    id: log
+    attributes:
+      label: "Home Assistant log (optional)"
+      description: "In Home Assistant, open Settings, System, Logs, and copy the lines about Housecairn. Remove addresses and names before you paste."
+      render: text
