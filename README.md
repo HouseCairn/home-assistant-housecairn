@@ -1,8 +1,25 @@
 # Housecairn for Home Assistant
 
-A Home Assistant integration for [Housecairn](https://github.com/HouseCairn/housecairn),
-the self-hosted planner for home maintenance and renovation work: see what
-needs doing in your home from Home Assistant, and mark it done there.
+<p align="center"><img src="custom_components/housecairn/brand/logo@2x.png" alt="Housecairn" width="320"></p>
+
+**Plan your home's maintenance and renovation work, room by room.**
+
+[Housecairn](https://github.com/HouseCairn/housecairn) keeps the list of everything your house needs, from recurring upkeep
+such as the smoke detector battery to projects such as repainting the living
+room. For each job it knows the room, the date, the supplies and the planned
+cost, and anyone in the household marks it done in one tap. It is free software
+that you host yourself, works on its own, and connects to Home Assistant if you
+use it.
+
+This integration brings Housecairn into Home Assistant: see what needs doing in
+your home on a dashboard, and mark it done there. For example:
+
+- the smoke detector test that is overdue shows in a sensor and in the
+  **Tasks** to-do list of the home;
+- the boiler service due today is checked off from that list, and Housecairn
+  schedules the next one;
+- a leak sensor that stays wet, or a battery that stays low, reports a problem
+  in Housecairn, in the right room, with one of the two blueprints.
 
 [![CI](https://github.com/HouseCairn/home-assistant-housecairn/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/HouseCairn/home-assistant-housecairn/actions/workflows/ci.yml?query=branch%3Amain)
 [![Validate](https://github.com/HouseCairn/home-assistant-housecairn/actions/workflows/validate.yml/badge.svg?branch=main)](https://github.com/HouseCairn/home-assistant-housecairn/actions/workflows/validate.yml?query=branch%3Amain)
@@ -133,6 +150,18 @@ and this repository's [plan](docs/plan.md). How to run the checks:
 
 This integration is developed with an AI coding agent, under human review. Each
 pull request says which tool was used.
+
+## The Housecairn repositories
+
+- [housecairn](https://github.com/HouseCairn/housecairn): the web application, to install first.
+- [home-assistant-addons](https://github.com/HouseCairn/home-assistant-addons): Housecairn as a Home Assistant app (add-on).
+- [home-assistant-housecairn](https://github.com/HouseCairn/home-assistant-housecairn): the Home Assistant integration (HACS) (this repository).
+- [housecairn-mobile](https://github.com/HouseCairn/housecairn-mobile): the phone app for iOS and Android, in development, not on the stores yet.
+- [website](https://github.com/HouseCairn/website): the site <https://housecairn.app>.
+
+Website: <https://housecairn.app>. Documentation, in English and French:
+<https://docs.housecairn.app>.
+
 
 ## License
 
