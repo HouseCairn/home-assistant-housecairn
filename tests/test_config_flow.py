@@ -491,7 +491,7 @@ async def test_the_dialog_after_sso_required_explains_the_token_to_create() -> N
 APP_HOST = "0f1e2d3c-housecairn"
 APP_URL = f"http://{APP_HOST}:8000"
 APP_API = f"{APP_URL}/api/v1"
-# What the app announces, and what the Supervisor adds (`addon`, the name of the app).
+# What the app announces, and what Home Assistant Core adds (`addon`, the name of the app).
 ANNOUNCED = {"host": APP_HOST, "port": 8000, "addon": "Housecairn"}
 
 

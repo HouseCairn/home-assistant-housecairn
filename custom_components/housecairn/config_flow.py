@@ -72,7 +72,7 @@ def _discovered_url(config: Mapping[str, Any]) -> str:
     """The internal address announced by the app: `http://<host>:<port>`.
 
     The app sends `{"host": <its host name on the Supervisor's network>, "port": 8000}`;
-    the Supervisor adds `addon`, the name of the app. Raises ValueError otherwise.
+    Home Assistant Core adds `addon`, the name of the app. Raises ValueError otherwise.
     """
     host = config.get("host")
     port = config.get("port")

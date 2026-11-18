@@ -67,6 +67,12 @@ token: there is no address to enter and no certificate setting.
   set up from the app follow it on their own and are reloaded.
 - **Ignore** on the discovered app hides it until the app announces another
   address.
+- Once an entry has been created by discovery, a second home opened by the same
+  token is added by the manual flow (**Add integration**, **Housecairn**), with the
+  address `http://<host name of the app>:8000`. Read the host name on the page of
+  the app (**Settings** > **Apps** > Housecairn), or in the log of the app, which
+  announces it at start. The address of the sidebar (Ingress) is not the one to
+  enter: it only works in a browser.
 
 An app that does not announce itself yet (an older version) is added by hand,
 as below, with an address that reaches it from Home Assistant without its
