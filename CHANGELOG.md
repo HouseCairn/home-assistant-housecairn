@@ -5,6 +5,16 @@ The versions of the integration, the newest first. The plan of each lot is in
 
 ## Unreleased
 
+- **The Housecairn app of Home Assistant is found on its own.** When the app
+  announces itself to the Supervisor (discovery, service `housecairn`, with its
+  `host` and `port`), Home Assistant offers **Housecairn (Home Assistant app)**
+  and asks for the API token only: the integration reaches the app at
+  `http://<host>:<port>` on the internal network, with no address to type and no
+  certificate setting. The home and the read-only steps are unchanged. An
+  address already set up is not offered again; an entry set up by hand is never
+  changed; the entries set up from the app follow it when it announces another
+  address. Setting up by hand is unchanged, and its dialog now says that the
+  app is found on its own.
 - **The two blueprints no longer fail when the automation is run by hand.**
   "Run actions" (or `automation.trigger`) gives a `trigger` with no `to_state` and
   no `entity_id`, and the title template failed with `'dict object' has no

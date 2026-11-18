@@ -1,4 +1,8 @@
-"""Config flow: the address of Housecairn and a Housecairn API token, then a home."""
+"""Config flow: the address of Housecairn and a Housecairn API token, then a home.
+
+The Housecairn app of Home Assistant announces its internal address to the
+Supervisor (discovery, service `housecairn`): the flow then asks for the token only.
+"""
 
 from __future__ import annotations
 
@@ -7,7 +11,12 @@ from collections.abc import Mapping
 from typing import Any
 
 import probatio as vol
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import (
+    SOURCE_HASSIO,
+    ConfigEntryState,
+    ConfigFlow,
+    ConfigFlowResult,
+)
 from homeassistant.const import CONF_API_TOKEN, CONF_URL, CONF_VERIFY_SSL
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
@@ -18,6 +27,7 @@ from homeassistant.helpers.selector import (
     TextSelectorConfig,
     TextSelectorType,
 )
+from homeassistant.helpers.service_info.hassio import HassioServiceInfo
 
 from .api import (
     Home,
@@ -46,13 +56,33 @@ USER_SCHEMA = vol.Schema(
     }
 )
 READ_ONLY_SCHEMA = vol.Schema({})
-REAUTH_SCHEMA = vol.Schema(
+# A token and nothing else, for reauthentication and for the discovered app: the app
+# gives its address, plain HTTP on the internal network of the Supervisor, where there
+# is no certificate to verify.
+TOKEN_SCHEMA = REAUTH_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_API_TOKEN): TextSelector(
             TextSelectorConfig(type=TextSelectorType.PASSWORD)
         ),
     }
 )
+
+
+def _discovered_url(config: Mapping[str, Any]) -> str:
+    """The internal address announced by the app: `http://<host>:<port>`.
+
+    The app sends `{"host": <its host name on the Supervisor's network>, "port": 8000}`;
+    the Supervisor adds `addon`, the name of the app. Raises ValueError otherwise.
+    """
+    host = config.get("host")
+    port = config.get("port")
+    if not isinstance(host, str) or not host or any(c in host for c in "/:@?#[] "):
+        raise ValueError("no host name in the announcement")
+    if isinstance(port, str) and port.isdigit():
+        port = int(port)
+    if isinstance(port, bool) or not isinstance(port, int) or not 0 < port < 65536:
+        raise ValueError("no port in the announcement")
+    return normalize_url(f"http://{host}:{port}")
 
 
 def _error_key(exc: HouseCairnError) -> str:
@@ -82,10 +112,34 @@ class HouseCairnConfigFlow(ConfigFlow, domain=DOMAIN):
         self._homes: dict[str, Home] = {}
         self._home: Home | None = None
         self._new_token = ""
+        self._app_name = ""
 
     def _client(self, url: str, token: str, verify_ssl: bool) -> HouseCairnClient:
         session = async_get_clientsession(self.hass, verify_ssl=verify_ssl)
         return HouseCairnClient(session, url, token)
+
+    async def _async_check(self, data: dict[str, Any]) -> str | None:
+        """List the homes of the token at the address; the form error if that fails.
+
+        On success the input is kept, and the open homes go to the next step.
+        """
+        try:
+            homes = await self._client(
+                data[CONF_URL], data[CONF_API_TOKEN], data[CONF_VERIFY_SSL]
+            ).homes()
+        except HouseCairnError as exc:
+            error = _error_key(exc)
+            if error == "unknown":
+                _LOGGER.warning("Unexpected answer from Housecairn: %s", exc)
+            return error
+        open_homes = [home for home in homes if not home.locked]
+        if not homes:
+            return "no_homes"
+        if not open_homes:
+            return "home_locked"
+        self._input = data
+        self._homes = {home.id: home for home in open_homes}
+        return None
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Ask for the address and the token, and check them with a real call."""
@@ -96,30 +150,72 @@ class HouseCairnConfigFlow(ConfigFlow, domain=DOMAIN):
             except ValueError:
                 errors[CONF_URL] = "invalid_url"
             else:
-                try:
-                    homes = await self._client(
-                        url, user_input[CONF_API_TOKEN], user_input[CONF_VERIFY_SSL]
-                    ).homes()
-                except HouseCairnError as exc:
-                    errors["base"] = _error_key(exc)
-                    if errors["base"] == "unknown":
-                        _LOGGER.warning("Unexpected answer from Housecairn: %s", exc)
-                else:
-                    open_homes = [home for home in homes if not home.locked]
-                    if not homes:
-                        errors["base"] = "no_homes"
-                    elif not open_homes:
-                        errors["base"] = "home_locked"
-                    else:
-                        self._input = {**user_input, CONF_URL: url}
-                        self._homes = {home.id: home for home in open_homes}
-                        return await self.async_step_home()
+                error = await self._async_check({**user_input, CONF_URL: url})
+                if error is None:
+                    return await self.async_step_home()
+                errors["base"] = error
         return self.async_show_form(
             step_id="user",
             data_schema=self.add_suggested_values_to_schema(
                 USER_SCHEMA, {CONF_URL: (user_input or {}).get(CONF_URL, "")}
             ),
             description_placeholders={"example_url": "https://housecairn.example.com"},
+            errors=errors,
+        )
+
+    async def async_step_hassio(self, discovery_info: HassioServiceInfo) -> ConfigFlowResult:
+        """The Housecairn app announced its internal address through the Supervisor.
+
+        An entry made from an earlier announcement follows the app to its new address;
+        an entry made by hand is never changed. The same address is never offered twice.
+        """
+        try:
+            url = _discovered_url(discovery_info.config)
+        except ValueError:
+            _LOGGER.warning("Ignored an announcement of the Housecairn app without an address")
+            return self.async_abort(reason="invalid_discovery_info")
+        # The unique ID of an entry is its home, and one token may open several homes of
+        # the same app: every entry made by discovery follows the app, which is what
+        # `_abort_if_unique_id_configured(updates=...)` would do for a single entry.
+        discovered = [
+            entry
+            for entry in self._async_current_entries(include_ignore=False)
+            if entry.source == SOURCE_HASSIO
+        ]
+        for entry in discovered:
+            if self.hass.config_entries.async_update_entry(
+                entry, data={**entry.data, CONF_URL: url}
+            ) and entry.state in (ConfigEntryState.LOADED, ConfigEntryState.SETUP_RETRY):
+                self.hass.config_entries.async_schedule_reload(entry.entry_id)
+        if discovered:
+            return self.async_abort(reason="already_configured")
+        # Until the token names the home, the flow is known by the address: a second
+        # announcement of it joins this flow, and "Ignore" is remembered for it.
+        await self.async_set_unique_id(url)
+        self._abort_if_unique_id_configured()
+        # An entry made by hand for this very address: nothing to add, nothing changed.
+        self._async_abort_entries_match({CONF_URL: url})
+        self._input = {CONF_URL: url, CONF_VERIFY_SSL: True}
+        self._app_name = discovery_info.name or "Housecairn"
+        self.context["title_placeholders"] = {"name": self._app_name}
+        return await self.async_step_hassio_confirm()
+
+    async def async_step_hassio_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Ask for the token only: the address comes from the app."""
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            error = await self._async_check(
+                {**self._input, CONF_API_TOKEN: user_input[CONF_API_TOKEN]}
+            )
+            if error is None:
+                return await self.async_step_home()
+            errors["base"] = error
+        return self.async_show_form(
+            step_id="hassio_confirm",
+            data_schema=TOKEN_SCHEMA,
+            description_placeholders={"addon": self._app_name},
             errors=errors,
         )
 
