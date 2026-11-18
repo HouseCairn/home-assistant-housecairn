@@ -81,6 +81,9 @@ documentation is at <https://docs.housecairn.app>.
    **Add integration**, pick **Housecairn**, and enter the address of
    Housecairn (such as `https://housecairn.example.com`, with its path if it is
    served under one) and the token. The integration checks both before saving.
+   With the Housecairn app of Home Assistant, **Housecairn (Home Assistant
+   app)** is already offered there: choose **Add** and paste the token, no
+   address needed.
 
 Without HACS, copy `custom_components/housecairn` into the `custom_components`
 folder of your Home Assistant configuration and restart. Details, including a
@@ -92,8 +95,11 @@ token bound to several homes and a home that requires a sign-in provider:
 - Home Assistant 2026.10 or later.
 - A Housecairn instance reachable from Home Assistant, version 0.1.0 or later.
 - With the [Housecairn app](https://github.com/HouseCairn/home-assistant-addons)
-  for Home Assistant: an address that reaches it without Home Assistant's
-  interface, such as its port; ingress addresses only work in a browser.
+  for Home Assistant: nothing more. A version of the app that announces itself
+  is found on its own and only asks for the token
+  ([how](docs/guide.md#the-housecairn-app-of-home-assistant)); an older one
+  needs an address that reaches it without Home Assistant's interface, such as
+  its port (ingress addresses only work in a browser).
 
 ## Known limits
 
@@ -129,7 +135,8 @@ to the next; the [changelog](CHANGELOG.md) says what changed.
 
 ## Privacy and security
 
-- The integration talks to the address you entered and nowhere else: no
+- The integration talks to the address you entered, or the one the Housecairn
+  app announced, and nowhere else: no
   telemetry, no tracker, no dependency beyond Home Assistant itself.
 - The token is stored in the configuration entry only, never written to the
   logs, and redacted from the diagnostics. The TLS certificate of the server is

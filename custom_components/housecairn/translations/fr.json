@@ -1,9 +1,10 @@
 {
   "config": {
+    "flow_title": "{name} (app Home Assistant)",
     "step": {
       "user": {
         "title": "Se connecter à Housecairn",
-        "description": "Créez un jeton d'API dans Housecairn (Plus, Moi, Jetons d'API), lié au logement à afficher. Donnez-lui le droit Lecture pour voir les tâches, et Lecture et Écriture pour aussi les marquer comme faites et signaler des problèmes depuis Home Assistant. Home Assistant appelle Housecairn avec ce jeton ; Housecairn ne reçoit jamais de jeton Home Assistant.",
+        "description": "Créez un jeton d'API dans Housecairn (Plus, Moi, Jetons d'API), lié au logement à afficher. Donnez-lui le droit Lecture pour voir les tâches, et Lecture et Écriture pour aussi les marquer comme faites et signaler des problèmes depuis Home Assistant. Home Assistant appelle Housecairn avec ce jeton ; Housecairn ne reçoit jamais de jeton Home Assistant. L'app Housecairn de Home Assistant est trouvée d'elle-même : elle est proposée dans Paramètres, Appareils et services, et ne demande que le jeton.",
         "data": {
           "url": "Adresse de Housecairn",
           "api_token": "Jeton d'API Housecairn",
@@ -13,6 +14,16 @@
           "url": "Par exemple {example_url}",
           "api_token": "Commence par hc_. Il n'est enregistré que dans cette entrée de configuration.",
           "verify_ssl": "Laissez activé, sauf si le certificat est un certificat de confiance que Home Assistant ne connaît pas."
+        }
+      },
+      "hassio_confirm": {
+        "title": "{addon} (app Home Assistant)",
+        "description": "Home Assistant a trouvé l'app {addon} sur ce système et la joint directement, sans adresse à saisir. Dans l'app (ouvrez-la depuis la barre latérale), créez un jeton d'API (Plus, Moi, Jetons d'API), lié au logement à afficher, avec le droit Lecture, ou Lecture et Écriture pour aussi marquer les tâches comme faites et signaler des problèmes depuis Home Assistant.",
+        "data": {
+          "api_token": "Jeton d'API Housecairn"
+        },
+        "data_description": {
+          "api_token": "Commence par hc_. Il n'est enregistré que dans cette entrée de configuration."
         }
       },
       "home": {
@@ -59,7 +70,8 @@
     "abort": {
       "already_configured": "Ce logement est déjà configuré.",
       "reauth_successful": "Le nouveau jeton est enregistré.",
-      "probe_failed": "Housecairn n'a pas pu dire ce que ce jeton peut faire. Réessayez."
+      "probe_failed": "Housecairn n'a pas pu dire ce que ce jeton peut faire. Réessayez.",
+      "invalid_discovery_info": "L'app Housecairn n'a annoncé aucune adresse utilisable."
     }
   },
   "entity": {

@@ -22,8 +22,11 @@ token** that you create in Housecairn and paste into the setup dialog.
   new one (see [Setup](#setup)).
 - It is stored in the configuration entry of the integration, never written to
   the logs, and redacted from the diagnostics.
-- The TLS certificate of the server is verified by default.
-- The integration talks to the address you entered and nowhere else. It has no
+- The TLS certificate of the server is verified by default. The Housecairn app
+  of Home Assistant, found by discovery, is reached over plain HTTP on the
+  internal network of the Supervisor, which never leaves the machine.
+- The integration talks to the address you entered, or the one the Housecairn
+  app announced, and nowhere else. It has no
   telemetry and no dependency beyond Home Assistant itself.
 
 ## Requirements
@@ -39,6 +42,43 @@ token** that you create in Housecairn and paste into the setup dialog.
   [A home that requires a sign-in provider](#a-home-that-requires-a-sign-in-provider).
 
 ## Setup
+
+### The Housecairn app of Home Assistant
+
+When Housecairn runs as the [Housecairn app](https://github.com/HouseCairn/home-assistant-addons)
+of Home Assistant, the app tells Home Assistant where to reach it, and
+**Settings** > **Devices & services** offers **Housecairn (Home Assistant
+app)** under the discovered integrations. Choose **Add**, then paste the API
+token: there is no address to enter and no certificate setting.
+
+- Home Assistant reaches the app directly on the internal network of the
+  Supervisor, at `http://<host name of the app>:8000`, as the app announced it.
+  This address only works from Home Assistant: open Housecairn from the
+  sidebar, as before.
+- Create the token in the app (**More, Me, API tokens, Create a token**), as
+  described in [How it connects](#how-it-connects). The integration checks it
+  with a real call, then asks for the home and says whether the token is
+  read-only, as below.
+- The app is offered once. An entry already set up by hand for the same
+  address is not offered again; an entry set up by hand at another address,
+  such as a public one, is never changed (adding the same home again is
+  refused, as always).
+- When the app announces another address (its host name changed), the entries
+  set up from the app follow it on their own and are reloaded.
+- **Ignore** on the discovered app hides it until the app announces another
+  address.
+- Once an entry has been created by discovery, a second home opened by the same
+  token is added by the manual flow (**Add integration**, **Housecairn**), with the
+  address `http://<host name of the app>:8000`. Read the host name on the page of
+  the app (**Settings** > **Apps** > Housecairn), or in the log of the app, which
+  announces it at start. The address of the sidebar (Ingress) is not the one to
+  enter: it only works in a browser.
+
+An app that does not announce itself yet (an older version) is added by hand,
+as below, with an address that reaches it from Home Assistant without its
+interface, such as its port.
+
+### Any other Housecairn
 
 Enter the address of Housecairn (for example `https://housecairn.example.com`)
 and the API token. The integration checks both with a real call before saving.

@@ -1,9 +1,10 @@
 {
   "config": {
+    "flow_title": "{name} (Home Assistant app)",
     "step": {
       "user": {
         "title": "Connect to Housecairn",
-        "description": "Create an API token in Housecairn (More, Me, API tokens), bound to the home to show. Give it the Read right to see the tasks, and Read and Write to also mark them Done and report problems from Home Assistant. Home Assistant calls Housecairn with this token; Housecairn never receives a Home Assistant token.",
+        "description": "Create an API token in Housecairn (More, Me, API tokens), bound to the home to show. Give it the Read right to see the tasks, and Read and Write to also mark them Done and report problems from Home Assistant. Home Assistant calls Housecairn with this token; Housecairn never receives a Home Assistant token. The Housecairn app of Home Assistant is found on its own: it is offered in Settings, Devices & services, and asks for the token only.",
         "data": {
           "url": "Address of Housecairn",
           "api_token": "Housecairn API token",
@@ -13,6 +14,16 @@
           "url": "For example {example_url}",
           "api_token": "Starts with hc_. It is stored in this configuration entry only.",
           "verify_ssl": "Leave on unless the certificate is one you trust and Home Assistant does not."
+        }
+      },
+      "hassio_confirm": {
+        "title": "{addon} (Home Assistant app)",
+        "description": "Home Assistant found the {addon} app on this system and reaches it directly, without an address to enter. In the app (open it from the sidebar), create an API token (More, Me, API tokens), bound to the home to show, with the Read right, or Read and Write to also mark tasks Done and report problems from Home Assistant.",
+        "data": {
+          "api_token": "Housecairn API token"
+        },
+        "data_description": {
+          "api_token": "Starts with hc_. It is stored in this configuration entry only."
         }
       },
       "home": {
@@ -59,7 +70,8 @@
     "abort": {
       "already_configured": "This home is already configured.",
       "reauth_successful": "The new token is saved.",
-      "probe_failed": "Housecairn could not tell what this token may do. Try again."
+      "probe_failed": "Housecairn could not tell what this token may do. Try again.",
+      "invalid_discovery_info": "The Housecairn app announced no usable address."
     }
   },
   "entity": {
