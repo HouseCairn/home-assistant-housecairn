@@ -3,7 +3,11 @@
 The versions of the integration, the newest first. The plan of each lot is in
 [docs/plan.md](docs/plan.md).
 
-## Unreleased
+## 0.3.0 (2026-11-18)
+
+A feature version: the Housecairn app of Home Assistant is found on its own, with
+its internal address provided, so only the API token is asked. Needs Housecairn
+0.1.0 or later; the discovery needs the Housecairn app 0.5.1.1 or later.
 
 - **The Housecairn app of Home Assistant is found on its own.** When the app
   announces itself to the Supervisor (discovery, service `housecairn`, with its
